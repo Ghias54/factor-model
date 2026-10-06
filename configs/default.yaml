@@ -9,8 +9,9 @@ universe:
   exchanges: [NYSE, NASDAQ, AMEX]
   common_stock_only: true
   min_price: 5.0             # TBD — month-end price filter
-  min_market_cap_pctile: 0.0 # TBD — e.g. 0.2 drops the smallest 20% each month
-  top_n_by_market_cap: null  # TBD — e.g. 1000 for a Russell-1000-style universe
+  min_market_cap_pctile: 0.0
+  top_n_by_market_cap: 1000  # DECIDED 2026-10-06 — re-ranked every month from all qualifying stocks
+  robustness_top_n: 500      # secondary check, S&P-500-like
 
 target:
   type: excess_return        # TBD — raw_return | excess_return | rank
