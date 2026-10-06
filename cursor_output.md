@@ -31,7 +31,26 @@ c63b18f Add data dictionary for stock-database tables
 548cc02 Add batched read-only data loaders and dev-DB smoke tests
 4afe56a Anchor data/ and outputs/ ignores to repo root
 ```
-(plus a final commit adding this file)
+plus:
+```
+3268141 Add cursor_output.md and task file for the data audit
+e6e9e76 Revert unrelated config/decisions edits swept in by git add -A
+(final) Update cursor_output.md
+```
+
+**Workflow note.** While this task was running, `configs/default.yaml` and `docs/decisions.md`
+were edited in the working tree at 16:48. The edits set `top_n_by_market_cap: 1000`, add
+`robustness_top_n: 500`, and add a decisions row. The task's `git add -A` swept them into
+`3268141`. Since that commit was already pushed, I did not rewrite history:
+- `e6e9e76` reverts both files, so the branch's net diff for them versus `main` is empty.
+- Your edits are restored in the working tree as **uncommitted** changes. Commit them on their
+  own branch.
+
+**Conflict with the audit.** The new decisions row says the top-1000 universe is
+"survivorship-free by construction". The audit shows it is not before ~2021. Re-ranking at `t`
+only helps if dead names exist in the database, and pre-2016 deaths do not. The top-1000
+12-month-forward delisting rate is 0.0% in 2006–2014, versus 3–4% from 2021. Please reword that
+reason before committing it.
 
 ## What was done
 
