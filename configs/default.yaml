@@ -1,0 +1,37 @@
+# Default configuration. Values marked TBD must be decided before use (see docs/plan.md).
+
+sample:
+  start: "2000-01-31"        # TBD — first month-end in the panel
+  end: "2026-08-31"          # TBD — last month-end with a realized forward return
+  holdout_start: "2024-01-31"  # TBD — NEVER used for fitting, tuning, or model selection
+
+universe:
+  exchanges: [NYSE, NASDAQ, AMEX]
+  common_stock_only: true
+  min_price: 5.0             # TBD — month-end price filter
+  min_market_cap_pctile: 0.0 # TBD — e.g. 0.2 drops the smallest 20% each month
+  top_n_by_market_cap: null  # TBD — e.g. 1000 for a Russell-1000-style universe
+
+target:
+  type: excess_return        # TBD — raw_return | excess_return | rank
+  horizon_months: 1
+
+preprocessing:
+  winsorize_pct: 0.01
+  cross_sectional_rank: true
+  missing_indicator: true
+
+walk_forward:
+  window: expanding          # expanding | rolling
+  min_train_months: 60
+  retrain_every_months: 12
+  cv_folds: 5                # time-ordered folds inside the training window
+
+portfolio:
+  n_quantiles: 10
+  weighting: equal           # TBD — equal | value
+  cost_bps_per_side: 10      # TBD
+
+compute:
+  n_jobs: -1
+  random_seed: 42
