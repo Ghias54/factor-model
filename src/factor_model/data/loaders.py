@@ -71,11 +71,21 @@ _ALLOWED_FUNDAMENTAL_COLUMNS = frozenset(
 )
 
 
-def month_ends(start: str | None = None, end: str | None = None, dev: bool = False) -> pd.Series:
-    """Last XNYS session of each calendar month, ascending."""
+def month_ends(
+    start: str | None = None,
+    end: str | None = None,
+    complete_only: bool = True,
+    dev: bool = False,
+) -> pd.Series:
+    """Last XNYS session of each calendar month, ascending.
+
+    ``trading_day`` stops at the last loaded session and flags it ``is_month_end``
+    even mid-month (2026-09-17). ``complete_only`` drops such a partial month.
+    """
     df = read_sql(
         """
-        SELECT date FROM trading_day
+        SELECT date, date = (SELECT max(date) FROM trading_day) AS is_last_loaded
+        FROM trading_day
         WHERE is_month_end
           AND (CAST(:start AS date) IS NULL OR date >= CAST(:start AS date))
           AND (CAST(:end AS date) IS NULL OR date <= CAST(:end AS date))
@@ -84,7 +94,12 @@ def month_ends(start: str | None = None, end: str | None = None, dev: bool = Fal
         {"start": start, "end": end},
         dev=dev,
     )
-    return pd.to_datetime(df["date"]).rename("date")
+    dates = pd.to_datetime(df["date"])
+    if complete_only:
+        last_bday = dates + pd.offsets.BMonthEnd(0)
+        partial = df["is_last_loaded"] & ((last_bday - dates).dt.days > 3)
+        dates = dates[~partial]
+    return dates.rename("date").reset_index(drop=True)
 
 
 def securities(dev: bool = False) -> pd.DataFrame:
@@ -164,15 +179,45 @@ def price_span(dev: bool = False) -> pd.DataFrame:
     return df
 
 
+def guard_zero_lag(
+    fund: pd.DataFrame,
+    min_lag_days: int = 1,
+    quarter_lag_days: int = 45,
+    annual_lag_days: int = 90,
+) -> pd.DataFrame:
+    """Re-impute availability for rows public less than ``min_lag_days`` after period end.
+
+    ~45k rows carry date_available = 00:00 ET on fiscal_period_end (vendor
+    filingDate = period end, labelled fmp_accepted). No filer publishes on the
+    period-end day, so these get the stock-database imputed_lag convention:
+    period end + 45d (Q1–Q3) or + 90d (Q4/FY) at 16:00 ET.
+    """
+    out = fund.copy()
+    avail_et = out["date_available"].dt.tz_convert(NY_TZ).dt.tz_localize(None).dt.normalize()
+    lag = (avail_et - out["fiscal_period_end"]).dt.days
+    bad = lag < min_lag_days
+    annual = out["fiscal_period"].isin(["Q4", "FY"])
+    days = pd.Series(quarter_lag_days, index=out.index).where(~annual, annual_lag_days)
+    imputed = (out["fiscal_period_end"] + pd.to_timedelta(days, unit="D") + pd.Timedelta(hours=16))
+    imputed = imputed.dt.tz_localize(NY_TZ).dt.tz_convert("UTC")
+    out.loc[bad, "date_available"] = imputed[bad]
+    out["zero_lag_reimputed"] = bad.astype("boolean")
+    if "date_source" in out:
+        out.loc[bad, "date_source"] = "imputed_lag_guard"
+    return out
+
+
 def fundamentals(
     columns: Sequence[str] = FUNDAMENTAL_COLUMNS,
     quarterly_only: bool = True,
+    guard: bool = True,
     dev: bool = False,
 ) -> pd.DataFrame:
     """Statement rows with their availability clock. Excludes vendor placeholder dates.
 
     ``quarterly_only`` keeps Q1–Q4 rows; FY rows share period ends with Q4 and
     carry annual flows, so mixing them breaks flow-variable features.
+    ``guard`` applies ``guard_zero_lag``.
     """
     bad = set(columns) - _ALLOWED_FUNDAMENTAL_COLUMNS
     if bad:
@@ -192,7 +237,7 @@ def fundamentals(
     df["date_available"] = pd.to_datetime(df["date_available"], utc=True)
     for col in columns:
         df[col] = df[col].astype("float64")
-    return df
+    return guard_zero_lag(df) if guard else df
 
 
 def asof_cutoff(dates: pd.Series, cutoff: time = time(16, 0)) -> pd.Series:
