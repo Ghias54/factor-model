@@ -1,0 +1,119 @@
+---
+description: Git workflow and non-negotiable research rules for the FE-Factor-Model repo
+alwaysApply: true
+---
+
+# FE-Factor-Model — working rules
+
+UIUC Financial Engineering Club project: "Machine Learning for Factor Investing".
+Monthly cross-sectional return prediction on US common stocks, built on the
+point-in-time Postgres database from the `stock-database` repo (`~/stock-database`).
+This repo READS that database. It never writes to it and never changes its schema.
+
+## Git workflow
+
+**Never commit directly to `main`.** `main` is only updated by Rehan merging a
+reviewed branch.
+
+**One checkout, one lane.** All work happens in `~/FE-Factor-Model`: one
+`cursor_task.md` in, one `cursor_output.md` out, one branch per task. No
+worktrees, no parallel lanes, no lane-lettered files.
+
+For every task:
+
+1. Branch from an up-to-date `main`:
+   ```
+   git checkout main && git pull
+   git checkout -b <type>/<short-description>
+   ```
+   Types: `panel/`, `factor/`, `feature/`, `model/`, `backtest/`, `eval/`,
+   `fix/`, `docs/`, `chore/`. One branch per task; never reuse an old branch.
+   If a task depends on an unmerged branch, branch from THAT branch and say so
+   in `cursor_output.md`.
+
+2. **Commit as you go**, one coherent step per commit, message says what and why.
+
+3. When done: `git push -u origin <branch>` and stop. Report the branch and
+   commit list in `cursor_output.md`.
+
+4. **Do not merge.** No self-merged PRs, no fast-forwarding `main`.
+
+5. Never `git push --force`, never rewrite published history, never
+   `git reset --hard` committed work.
+
+If a task conflicts with this file, follow this file and say so.
+
+## What is never committed
+
+`data/`, `outputs/`, `.env`, model artifacts (`*.pkl`, `*.joblib`, `*.pt`),
+parquet/CSV extracts, and database dumps. Notebooks are committed with outputs
+cleared. `.env.example` is the only env file in the repo.
+
+## Research rules that do not bend
+
+**Point-in-time or it does not ship.** Every value used at month-end `t` must
+have been public at `t`. Fundamentals join on `date_available` (SEC acceptance)
+from the stock database, never on fiscal period end. Analyst estimates use the
+estimate as it stood at `t`, not the latest revision. If a field has no as-of
+date, it cannot be a feature.
+
+**No "now" snapshots.** Vendor TTM ratios, key metrics, current market cap, and
+current float are not point-in-time. Value factors are computed from the
+point-in-time price at `t` times point-in-time statement line items.
+
+**Survivorship bias.** The universe at month `t` is what was trading at `t`,
+including names that later delisted or went bankrupt. Never filter with today's
+listings or today's index membership. Delisting returns are included, not
+dropped.
+
+**Target alignment.** Features are as of month-end `t`; the target is the
+return over `t` to `t+1`. A feature computed with any price after `t` is
+lookahead. Add a test for every new feature that shifting the input data
+forward changes nothing at `t`.
+
+**Walk-forward only.** Train on data through `t`, predict `t+1`, roll forward.
+Hyperparameter tuning uses time-ordered CV inside the training window only
+(never shuffled k-fold). Cross-sectional preprocessing (ranks, z-scores,
+winsorizing, imputation) is fit per month using only that month's cross-section.
+
+**The holdout is sacred.** A final holdout period is defined in
+`configs/default.yaml`. Nothing fits, tunes, selects features, or picks a model
+on it. It is evaluated once, at the end, when Rehan says so.
+
+**Missing is not zero.** Null stays null until an explicit, documented
+imputation step (e.g. cross-sectional median, plus a missing-indicator).
+
+**Baselines first.** Every ML model is compared against the classical
+single-factor sorts and an equal-weight composite. A model with no baseline
+comparison is not a result.
+
+**Report costs and turnover.** Every backtest reports gross and net-of-cost
+results and turnover. The cost assumption lives in config, not in code.
+
+## Compute
+
+tradinghost is the compute box. Heavy jobs (panel builds, feature builds,
+CV, training, SHAP) must use the available hardware: `n_jobs=-1`, parallelize
+across months/folds, batch database reads (one query per table per run, not per
+symbol), and cache intermediate panels to `data/` as parquet. Report wall time
+for heavy jobs in `cursor_output.md`.
+
+## Code conventions
+
+- Python package in `src/factor_model/`; scripts in `scripts/` are thin CLIs.
+- All parameters (dates, universe filters, costs, holdout) come from
+  `configs/*.yaml`. No magic numbers in code.
+- Database access only through `src/factor_model/data/db.py`; connection from
+  `.env` (`STOCKDB_DSN`). Read-only.
+- Panels are pandas DataFrames indexed by (`date`, `security_id`).
+- Seeds are set and logged for every model run.
+- Tests in `tests/`, run with `pytest`. New features need a lookahead test.
+
+## Reporting
+
+Every task ends with `cursor_output.md` at the repo root: what was done,
+branch and commits, what was verified and how, wall time for heavy jobs,
+judgment calls made, and anything believed to be a design flaw. **Also list
+what was NOT done or skipped.**
+
+Flag disagreements early.

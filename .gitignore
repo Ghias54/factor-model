@@ -1,0 +1,30 @@
+# Environment
+.env
+.venv/
+venv/
+
+# Data and outputs (never committed)
+data/
+outputs/
+*.parquet
+*.csv
+*.pkl
+*.joblib
+*.pt
+*.dump
+*.sql.gz
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editor / OS
+.vscode/
+.DS_Store
