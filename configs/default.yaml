@@ -1,36 +1,144 @@
-# Default configuration. Values marked TBD must be decided before use (see docs/plan.md).
+# Locked 2026-10-20 — see docs/design-decisions-2026-10-20.md and docs/decisions.md.
 
 sample:
-  start: "2000-01-31"        # TBD — first month-end in the panel
-  end: "2026-08-31"          # TBD — last month-end with a realized forward return
-  holdout_start: "2024-01-31"  # TBD — NEVER used for fitting, tuning, or model selection
+  start: "2006-01-31"
+  end: "2026-08-31"            # last month-end with a complete t+1 month
+  holdout_start: "2024-01-31"  # NEVER used for fitting, tuning, or model selection
+  first_oos: "2011-01-31"      # first out-of-sample prediction month
 
 universe:
   exchanges: [NYSE, NASDAQ, AMEX]
   common_stock_only: true
-  min_price: 5.0             # TBD — month-end price filter
-  min_market_cap_pctile: 0.0 # TBD — e.g. 0.2 drops the smallest 20% each month
-  top_n_by_market_cap: null  # TBD — e.g. 1000 for a Russell-1000-style universe
+  min_price: 5.0               # applied to close_raw (as-traded), not close
+  price_field: close_raw
+  min_market_cap_pctile: 0.0
+  top_n_by_market_cap: 1000    # re-ranked every month-end
+  market_cap: close_x_shares_diluted  # close × weighted_average_shares_diluted; never close_adj × shares
+  membership: non_suspect_price_at_t
+  delisting_return: partial_month_to_last_price
 
 target:
-  type: excess_return        # TBD — raw_return | excess_return | rank
+  type: rank                   # cross-sectional rank of next-month return, scaled to [-1, 1]
   horizon_months: 1
+  return_field: close_adj      # exclude price_quality='suspect'
+  risk_free: month3            # treasury_rate.month3 for excess-return reporting
+
+features:
+  staleness_days_fundamentals: 548
+  earnings_max_age_days: 120
+  information_cutoff: "16:00 America/New_York"
+  names:
+    # Classic four
+    - value_bm                 # total_equity / mcap
+    - size_ln_mcap             # log(mcap)
+    - momentum_12_1            # return t-12 → t-1 (skip most recent month)
+    - quality_roe              # TTM net income / latest total_equity; missing if equity ≤ 0
+    # Valuation
+    - earnings_yield           # TTM EPS / price
+    - sales_to_price           # TTM revenue / mcap
+    - cashflow_to_price        # TTM CFO / mcap
+    # Price / risk
+    - reversal_1m              # 1-month return
+    - momentum_6m              # return t-6 → t
+    - reversal_36_13           # return t-36 → t-13
+    - volatility_12m           # 12-month return volatility
+    - beta_60m                 # 60-month beta vs ^GSPC (monthly)
+    - max_daily_ret_1m         # max daily return in the last month
+    # Liquidity
+    - turnover                 # volume / weighted_average_shares
+    - dollar_volume_ln         # log(close × volume)
+    - amihud                   # Amihud illiquidity
+    # Profitability
+    - gross_margin
+    - roa
+    - gross_profit_to_assets
+    - delta_roe_4q             # 4-quarter change in ROE
+    # Growth / investment
+    - revenue_growth_yoy
+    - asset_growth_yoy
+    - accruals                 # (TTM NI − TTM CFO) / assets
+    # Balance sheet
+    - debt_to_assets
+    - current_ratio
+    # Earnings
+    - sue                      # (eps_actual − eps_estimated) / price; report_date < t, ≤ 120 days
 
 preprocessing:
-  winsorize_pct: 0.01
   cross_sectional_rank: true
-  missing_indicator: true
+  rank_scale: [-1, 1]
+  missing_to: 0                # cross-sectional median after ranking → 0
+  missing_indicator: false     # Gu-Kelly-Xiu style: fill, do not add indicators
+  winsorize_pct: null          # ranks replace winsorizing
 
 walk_forward:
-  window: expanding          # expanding | rolling
+  window: expanding
+  retrain: january             # refit + retune every January; predict that year's 12 months
+  validation_years: 3          # last 3 years before each refit
   min_train_months: 60
   retrain_every_months: 12
-  cv_folds: 5                # time-ordered folds inside the training window
+
+models:
+  - name: classic4_ew
+    type: equal_weight_composite
+    features: [value_bm, size_ln_mcap, momentum_12_1, quality_roe]
+    tune: {}
+  - name: lasso
+    type: lasso
+    tune: {alpha: [0.0001, 0.001, 0.01, 0.1, 1.0]}
+  - name: ridge
+    type: ridge
+    tune: {alpha: [0.01, 0.1, 1.0, 10.0, 100.0]}
+  - name: random_forest
+    type: random_forest
+    tune:
+      max_depth: [3, 5, 8, null]
+      n_estimators: [100, 300, 500]
+      min_samples_leaf: [5, 20, 50]
+  - name: xgboost
+    type: xgboost
+    tune:
+      max_depth: [3, 5, 7]
+      learning_rate: [0.01, 0.05, 0.1]
+      n_estimators: [100, 300, 500]
+  - name: mlp
+    type: mlp
+    tune:
+      width: [32, 64, 128]
+      n_layers: [2, 3]
+      dropout: [0.1, 0.3, 0.5]
+      l2: [0.0001, 0.001, 0.01]
+  - name: ensemble
+    type: mean_ensemble
+    members: [lasso, xgboost, mlp]
+    tune: {}
 
 portfolio:
+  long_only: true
   n_quantiles: 10
-  weighting: equal           # TBD — equal | value
-  cost_bps_per_side: 10      # TBD
+  long_quantile: top           # buy top decile (100 names)
+  weighting: equal
+  hold_months: 1
+  benchmark: equal_weight_universe
+  secondary_benchmarks: [value_weight_universe, sp500]
+  cost_bps_per_side: 10        # sensitivity only; report gross and net
+
+evaluation:
+  regimes:
+    covid: {start: "2020-02-29", end: "2020-12-31"}
+    ratehike: {start: "2022-01-31", end: "2022-12-31"}
+    survivorship_biased: {start: "2011-01-31", end: "2020-12-31"}
+    survivorship_clean: {start: "2021-01-31", end: "2023-12-31"}
+  metrics:
+    - ann_return
+    - ann_vol
+    - sharpe
+    - max_drawdown
+    - turnover
+    - excess_vs_benchmark
+    - tracking_error
+    - information_ratio
+  diagnostics_only: [top_minus_bottom_spread, monthly_rank_ic]
+  fama_french_corr_min: 0.6
 
 compute:
   n_jobs: -1
