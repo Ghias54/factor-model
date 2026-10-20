@@ -4,8 +4,8 @@
 venv/
 
 # Data and outputs (never committed)
-data/
-outputs/
+/data/
+/outputs/
 *.parquet
 *.csv
 *.pkl
