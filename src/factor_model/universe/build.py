@@ -88,8 +88,8 @@ def build_universe(
     elig = elig[elig["mcap"].notna() & (elig["mcap"] > 0)].copy()
 
     elig["rank"] = elig.groupby("date")["mcap"].rank(ascending=False, method="first").astype(int)
-    univ = elig[elig["rank"] <= top_n].copy()
-    univ["symbol"] = loaders.symbol_asof(univ, hist)
+    univ = elig[elig["rank"] <= top_n].copy().reset_index(drop=True)
+    univ["symbol"] = loaders.symbol_asof(univ, hist).to_numpy()
     # Attach listing dates for delisting handling downstream
     univ = univ.merge(
         sec[["security_id", "first_trade_date", "last_trade_date"]],

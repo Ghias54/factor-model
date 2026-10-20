@@ -262,11 +262,19 @@ def asof_fundamentals(
     Rows older than ``max_staleness_days`` (by availability) are dropped.
     """
     left = keys[["security_id", "date"]].copy()
-    left["_cutoff"] = asof_cutoff(left["date"], cutoff)
-    left = left.sort_values("_cutoff")
-    right = fund.sort_values(["date_available", "fiscal_period_end"]).drop_duplicates(
-        ["security_id", "date_available"], keep="last"
+    left["security_id"] = left["security_id"].astype("int64")
+    left["date"] = pd.to_datetime(left["date"]).astype("datetime64[ns]")
+    left["_cutoff"] = asof_cutoff(left["date"], cutoff).astype("datetime64[ns, UTC]")
+    # merge_asof requires the on-key to be globally sorted (by-groups stay ordered).
+    left = left.sort_values("_cutoff", kind="mergesort")
+    right = fund.copy()
+    right["security_id"] = right["security_id"].astype("int64")
+    right["date_available"] = pd.to_datetime(right["date_available"], utc=True).astype(
+        "datetime64[ns, UTC]"
     )
+    right = right.sort_values(
+        ["date_available", "fiscal_period_end"], kind="mergesort"
+    ).drop_duplicates(["security_id", "date_available"], keep="last")
     out = pd.merge_asof(
         left,
         right,
@@ -457,20 +465,20 @@ def symbol_asof(keys: pd.DataFrame, history: pd.DataFrame | None = None, dev: bo
     """Ticker valid on each ``keys.date`` (half-open ``[valid_from, valid_to)``)."""
     hist = history if history is not None else symbol_history(dev=dev)
     left = keys[["security_id", "date"]].copy().reset_index(drop=True)
-    left["_i"] = left.index
-    left = left.sort_values("date")
-    right = hist.sort_values("valid_from")
-    m = pd.merge_asof(
-        left,
-        right.rename(columns={"valid_from": "_vf"}),
-        left_on="date",
-        right_on="_vf",
-        by="security_id",
-        direction="backward",
-    )
-    open_ok = m["valid_to"].isna() | (m["date"] < m["valid_to"])
-    m.loc[~open_ok, "symbol"] = pd.NA
-    return m.sort_values("_i")["symbol"].reset_index(drop=True)
+    left["date"] = pd.to_datetime(left["date"]).astype("datetime64[ns]")
+    left["security_id"] = left["security_id"].astype("int64")
+    left["_i"] = np.arange(len(left))
+    right = hist.copy()
+    right["valid_from"] = pd.to_datetime(right["valid_from"]).astype("datetime64[ns]")
+    right["valid_to"] = pd.to_datetime(right["valid_to"]).astype("datetime64[ns]")
+    right["security_id"] = right["security_id"].astype("int64")
+    right["valid_to"] = right["valid_to"].fillna(pd.Timestamp("2262-04-11"))
+    # Interval join: one history row per security covers most names; still cheap.
+    m = left.merge(right, on="security_id", how="left")
+    ok = (m["date"] >= m["valid_from"]) & (m["date"] < m["valid_to"])
+    m = m.loc[ok, ["_i", "symbol"]].drop_duplicates("_i", keep="last")
+    out = left[["_i"]].merge(m, on="_i", how="left")
+    return out.sort_values("_i")["symbol"].reset_index(drop=True)
 
 
 def asof_last_n_quarters(
