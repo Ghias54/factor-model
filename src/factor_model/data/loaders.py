@@ -511,23 +511,34 @@ def asof_last_n_quarters(
     ]
     out_frames: list[pd.DataFrame] = []
     fund_sorted = fund.sort_values(["security_id", "date_available", "fiscal_period_end"])
+    fund_sorted["date_available"] = pd.to_datetime(fund_sorted["date_available"], utc=True).astype(
+        "datetime64[ns, UTC]"
+    )
+    fund_sorted["fiscal_period_end"] = pd.to_datetime(fund_sorted["fiscal_period_end"]).astype(
+        "datetime64[ns]"
+    )
+    fund_by = {sid: g for sid, g in fund_sorted.groupby("security_id", sort=False)}
     for sid, gkeys in left.groupby("security_id", sort=False):
-        gf = fund_sorted[fund_sorted["security_id"] == sid]
-        if gf.empty:
+        gf = fund_by.get(sid)
+        if gf is None or gf.empty:
             continue
-        avail = gf["date_available"].to_numpy()
-        fpe = gf["fiscal_period_end"].to_numpy()
+        avail = (
+            pd.to_datetime(gf["date_available"], utc=True)
+            .dt.tz_localize(None)
+            .to_numpy(dtype="datetime64[ns]")
+        )
+        fpe = gf["fiscal_period_end"].to_numpy(dtype="datetime64[ns]")
         vals = {c: gf[c].to_numpy() for c in value_cols}
         rows = []
         for ridx, cut in zip(gkeys["_row"].to_numpy(), gkeys["_cutoff"].to_numpy(), strict=True):
+            cut_ns = np.datetime64(pd.Timestamp(cut).tz_convert("UTC").tz_localize(None), "ns")
             # rightmost index with date_available <= cut
-            hi = avail.searchsorted(cut, side="right")
+            hi = int(np.searchsorted(avail, cut_ns, side="right"))
             if hi == 0:
                 continue
             end = hi - 1
-            if (
-                max_staleness_days is not None
-                and avail[end] < cut - pd.Timedelta(days=max_staleness_days)
+            if max_staleness_days is not None and avail[end] < cut_ns - np.timedelta64(
+                max_staleness_days, "D"
             ):
                 continue
             # walk back by fiscal_period_end among rows with avail <= cut
@@ -544,7 +555,7 @@ def asof_last_n_quarters(
                 last_fpe = fpe[j]
                 if len(idxs) == n:
                     break
-            rec: dict = {"_row": ridx, "ttm_ok": len(idxs) == n}
+            rec: dict = {"_row": int(ridx), "ttm_ok": len(idxs) == n}
             for k, j in enumerate(idxs):
                 for c in value_cols:
                     rec[f"q{k}_{c}"] = vals[c][j]
