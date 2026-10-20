@@ -323,32 +323,41 @@ def compute_targets_and_features(
 
     t1 = time.perf_counter()
     sids = [int(x) for x in keys["security_id"].unique()]
-    daily = loaders.prices_daily(
-        "2005-01-01",
-        "2026-10-15",
-        security_ids=sids,
-        columns=("close", "close_adj", "volume", "price_quality"),
-        dev=dev,
-    )
-    daily = daily[daily["price_quality"].isna() | (daily["price_quality"] != "suspect")]
-    walls["daily_prices_load_s"] = round(time.perf_counter() - t1, 2)
-
-    t1 = time.perf_counter()
     month_meta = keys[["security_id", "date"]].drop_duplicates().copy()
     month_meta["_start_12m"] = month_meta["date"] - pd.DateOffset(months=12)
     month_meta["_start_1m"] = month_meta["date"] - pd.DateOffset(months=1)
-    daily_by = {sid: g for sid, g in daily.groupby("security_id", sort=False)}
     meta_by = {sid: g for sid, g in month_meta.groupby("security_id", sort=False)}
 
-    def _one(sid: int) -> pd.DataFrame:
-        return _daily_features_for_sid(sid, meta_by.get(sid, pd.DataFrame()), daily_by.get(sid, pd.DataFrame()))
+    # Chunk daily loads — full history for all universe names does not fit in 11 GB RAM.
+    chunk = 150
+    daily_parts: list[pd.DataFrame] = []
+    load_s = 0.0
+    for i in range(0, len(sids), chunk):
+        batch = sids[i : i + chunk]
+        lt = time.perf_counter()
+        daily = loaders.prices_daily(
+            "2005-01-01",
+            "2026-10-15",
+            security_ids=batch,
+            columns=("close", "close_adj", "volume", "price_quality"),
+            dev=dev,
+        )
+        load_s += time.perf_counter() - lt
+        daily = daily[daily["price_quality"].isna() | (daily["price_quality"] != "suspect")]
+        daily_by = {sid: g for sid, g in daily.groupby("security_id", sort=False)}
 
-    parts = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(_one)(sid) for sid in sids)
-    daily_feat = (
-        pd.concat([p for p in parts if p is not None and len(p)], ignore_index=True)
-        if parts
-        else pd.DataFrame()
-    )
+        def _one(sid: int, _db=daily_by) -> pd.DataFrame:
+            return _daily_features_for_sid(
+                sid, meta_by.get(sid, pd.DataFrame()), _db.get(sid, pd.DataFrame())
+            )
+
+        # Threads within a small chunk; processes would copy the batch.
+        n_inner = min(8, max(1, len(batch)))
+        parts = Parallel(n_jobs=n_inner, prefer="threads")(delayed(_one)(sid) for sid in batch)
+        daily_parts.extend(p for p in parts if p is not None and len(p))
+        del daily, daily_by, parts
+    walls["daily_prices_load_s"] = round(load_s, 2)
+    daily_feat = pd.concat(daily_parts, ignore_index=True) if daily_parts else pd.DataFrame()
     if len(daily_feat):
         keys = keys.merge(daily_feat, on=["security_id", "date"], how="left")
     else:
