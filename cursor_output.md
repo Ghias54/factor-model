@@ -1,100 +1,102 @@
-# Cursor output — chore/lock-decisions
+# Cursor output — feat/panel
 
-Date: 2026-10-20 · Branch: `chore/lock-decisions` (from updated `main` @ `38d4811`) · Pushed, not merged.
+Date: 2026-10-20 · Branch: `feat/panel` (from `main` @ `1373836`) · Pushed, **not** merged.
 
-## 1. Discarded working-tree diffs (FE-Factor-Model)
-
-Recorded before `git restore` on 2026-10-20. These were superseded by
-`docs/design-decisions-2026-10-20.md` and contained the incorrect survivorship claim
-(later softened in the working tree, but still discarded as directed).
-
-### `configs/default.yaml` (discarded)
-
-```diff
--  min_market_cap_pctile: 0.0 # TBD — e.g. 0.2 drops the smallest 20% each month
--  top_n_by_market_cap: null  # TBD — e.g. 1000 for a Russell-1000-style universe
-+  min_market_cap_pctile: 0.0
-+  top_n_by_market_cap: 1000  # DECIDED 2026-10-06 — re-ranked every month from all qualifying stocks
-+  robustness_top_n: 500      # secondary check, S&P-500-like
-```
-
-### `docs/decisions.md` (discarded)
-
-```diff
-+| 2026-10-06 | Universe = top 1000 US common stocks by market cap, re-ranked monthly (top 500 as robustness check) | Russell-1000-like; avoids micro-cap noise; larger cross-section for ML than S&P 500; least exposed of the candidate universes to the vendor's missing pre-2016 delistings (see docs/data-audit.md). Re-ranking at t is survivorship-free only where dead names exist in the database — roughly from 2021; earlier years are partly survivorship-biased. Today's S&P 500 list rejected (fully survivorship-biased) |
-```
-
-### Other uncommitted items at task start (not discarded)
-
-- `M cursor_task.md` — new task file for this run (kept / committed on the chore branch).
-- `?? docs/design-decisions-2026-10-20.md` — locked decisions source (kept / committed).
-
-No other dirty files. Did not stop; these two are required inputs for this task.
-
-## 2. Merges into main (Approved by Rehan 2026-10-20)
-
-### FE-Factor-Model
+## 0. Merge `chore/lock-decisions` → main (Approved by Rehan 2026-10-20)
 
 | | |
 |---|---|
-| Merge commit | `38d4811` Merge docs/data-audit into main. Approved by Rehan 2026-10-20. |
-| Strategy | `--no-ff`, ort; **no conflicts** |
-| Pushed | `origin/main` `601502c..38d4811` |
-| Confirmed on main | `src/factor_model/data/db.py`, `loaders.py`, `audit.py`, `__init__.py` |
-| Tests | `pytest`: **9 passed** (after merge, before chore branch) |
+| Merge commit | `1373836` Merge chore/lock-decisions into main. Approved by Rehan 2026-10-20. |
+| Strategy | `--no-ff` |
+| Tests after merge | `pytest`: **12 passed** (pre-panel); after panel work: **16 passed** |
+| Then | `git checkout -b feat/panel` |
 
-### stock-database
+## Branch commits (`feat/panel` not in `main`)
+
+```
+0edbcdd Add cursor_task for feat/panel
+479f8cb Extend loaders for daily prices, index, treasury, and TTM as-of
+e75e6d8 Add monthly top-N universe builder
+191063c Add 26-feature panel compute, preprocess, CLI, lookahead tests
+c7a50e0 Fix symbol_asof: interval join and index-aligned assignment
+273cb2e Speed up asof_last_n_quarters with per-security index
+320c6f0 Chunk daily price loads for vol/Amihud to fit in RAM
+(+ final: panel-report + GSPC target-sanity corr fix)
+```
+
+## Universe
+
+| Metric | Value |
+|---|---|
+| Months | 248 (2006-01-31 → 2026-08-31) |
+| Rows | 248,000 (exactly 1000 every month; none below) |
+| Distinct securities | 2,650 |
+| Vendor mcap fallback | 14,109 rows (5.69%) when diluted shares missing |
+| Min `close_raw` | $5.0 |
+| mcap | `close × weighted_average_shares_diluted` (PIT + zero-lag guard) |
+
+## Feature coverage
+
+Full table in `docs/panel-report.md`. **No feature below 70% in any year.**
+
+Weakest early years (still ≥70%): `reversal_36_13` ~75% in 2006–07; `beta_60m` ~77% in 2006; `delta_roe_4q` / quality-ish fundamentals mid-70s–80s early sample. Coverage rises through 2025–26.
+
+## Lookahead tests
+
+`tests/test_panel_lookahead.py` — sample of 200 `(security_id, month)` rows:
+
+- Fundamentals: `date_available` ≤ 16:00 ET on month-end `t`
+- Earnings: `report_date` < `t` (SUE)
+
+`pytest`: **16 passed** (including 4 lookahead).
+
+## Spot checks / mcap / target
+
+| Check | Result |
+|---|---|
+| AAPL | 248 months, 2006-01-31 → 2026-08-31 |
+| SIVB | 201 months through **2023-02-28**; present Feb-2023, **absent** Mar-2023 |
+| mcap vs vendor `market_cap_daily` | median ratio **1.008**; 94.6% within ±20% (n=246,217) |
+| Mean EW universe monthly return | **0.860%** |
+| Corr vs ^GSPC (same t→t+1 window) | **0.935** (n=247) |
+
+Note: an earlier report draft compared forward stock returns to *trailing* GSPC pct_change (~0.05 corr). Fixed in `write_report` to use GSPC forward return aligned with `ret_1m`.
+
+## Artifacts (gitignored under `data/`)
+
+| File | Size |
+|---|---|
+| `data/panel/universe.parquet` | 12 MB |
+| `data/panel/features_raw.parquet` | 50 MB |
+| `data/panel/panel.parquet` | 27 MB |
+| plus `*_meta.json`, `report_extras.json` | |
+
+Processed panel: Gu–Kelly–Xiu rank → [-1,1], missing → 0, plus `ret_1m`, `excess_ret_1m`, `target_rank`.
+
+## Performance (tradinghost)
 
 | | |
 |---|---|
-| Merge commit | `35559e8` Merge load/gap-pull-1016 into main. Approved by Rehan 2026-10-20. |
-| Strategy | `--no-ff`, ort; **no conflicts** |
-| Pushed | `origin/main` `c1d83a0..35559e8` |
-| Brought in | `src/load/gap_pull.py`, `scripts/load_gap_pull.py`, `scripts/load_sec_q3_statements.py`, migration `049_ownership_incomplete.sql`, instrument_guard fix, cursor_output |
-| Tests | `pytest`: **486 passed, 3 skipped** in 46.9s |
-| Not done | No loads, crawls, repairs, or migrations run; database untouched |
+| Total wall | **877.6 s** (~14.6 min) |
+| Universe | 128.5 s |
+| Features | 746.2 s (TTM as-of 340 s; daily load 217 s; daily features 284 s) |
+| Peak RSS | **2784 MB** |
+| Parallelism | batched DB reads; daily prices in chunks of 150 securities (avoided ~8 GB OOM) |
 
-## 3. Branch `chore/lock-decisions` commits
+## Judgment calls
 
-```
-fc48c82 Add cursor_task for chore/lock-decisions
-2264d90 Assert locked config keys in test_config
-9ef23df Lock decisions log and plan to 2026-10-20 design decisions
-8e15d2c Lock configs/default.yaml to 2026-10-20 design decisions
-(+ final commit for this cursor_output.md)
-```
+1. Vendor mcap used only for **ranking** when diluted shares missing (counted); size feature still uses computed mcap where available.
+2. Delisting: return to last non-suspect `close_adj` through next month-end when possible.
+3. TTM requires 4 consecutive quarters; else NaN (not partial sum).
+4. Did **not** use `stock-database` monthly_panel builder.
+5. Daily price load chunked to stay under RAM; not full `n_jobs=-1` across months for that stage (memory-bound).
 
-Tests on branch: `pytest` **12 passed**.
+## NOT done / skipped
 
-## 4. Config keys changed (`configs/default.yaml`)
-
-| Area | Change |
-|---|---|
-| `sample` | start → 2006-01-31; end kept 2026-08-31; holdout kept 2024-01-31; **added** `first_oos: 2011-01-31` |
-| `universe` | `top_n_by_market_cap: 1000`; `price_field: close_raw`; `market_cap: close_x_shares_diluted`; membership / delisting_return notes; **removed** any `robustness_top_n` |
-| `target` | `type: rank`; `risk_free: month3`; `return_field: close_adj` |
-| `features` | **new** block: 26 named features, staleness 548, earnings ≤120 days, 16:00 ET cutoff |
-| `preprocessing` | rank to [-1,1]; `missing_to: 0`; `missing_indicator: false`; winsorize null |
-| `walk_forward` | `retrain: january`; `validation_years: 3` |
-| `models` | **new** list of 7 models with placeholder tune grids |
-| `portfolio` | `long_only: true`; top decile; equal weight; benchmark EW universe; cost 10 bps/side |
-| `evaluation` | **new** regimes (covid, ratehike, survivorship_biased/clean) + metrics |
-
-## 5. Docs
-
-- `docs/decisions.md` rewritten as a date/decision/reason/source table covering every section of the 2026-10-20 design doc. Explicit: universe is **NOT survivorship-free before ~2021**.
-- `docs/plan.md` rebuild order matches "Build order after cleanup" (§1 panel → §2 classic+FF → §3 models → §4 portfolios/regimes → §5 holdout once).
-- `docs/design-decisions-2026-10-20.md` committed as the source-of-truth review note.
-
-## 6. Conflicts
-
-None on either merge.
-
-## 7. NOT done / skipped
-
-- Did **not** build universe, panel, features, or models.
-- Did **not** merge `chore/lock-decisions` into main (human merges).
-- Did **not** run any stock-database loads, crawls, repairs, or migrations.
-- Did **not** change production or dev databases.
-- Did **not** apply the stock-database zero-lag fundamentals repair (loaders still guard).
-- Did **not** refetch pre-2005 prices for the 602 truncated names (explicitly skipped per decisions).
+- Classic single-factor portfolios / FF check
+- Any ML models, CV, SHAP, backtests
+- Merging `feat/panel` into `main` (human merges)
+- Holdout fitting/tuning (holdout untouched)
+- Writing to the stock database / schema changes
+- Zero-lag fundamentals DB repair (loaders still guard)
+- Refetch of pre-2005 truncated prices

@@ -110,19 +110,22 @@ def write_report(
         "sivb_in_2023_03": bool((sivb["date"] == "2023-03-31").any()) if len(sivb) else False,
     }
 
-    # Target sanity vs ^GSPC
+    # Target sanity vs ^GSPC over the same t → t+1 window as ret_1m.
     idx = loaders.index_prices("^GSPC", "2005-01-01", "2026-10-15")
-    me = raw[["date"]].drop_duplicates().sort_values("date")
+    me = raw[["date"]].drop_duplicates().sort_values("date").copy()
+    me["date"] = pd.to_datetime(me["date"]).astype("datetime64[ns]")
+    idx = idx.copy()
+    idx["date"] = pd.to_datetime(idx["date"]).astype("datetime64[ns]")
     idx_me = pd.merge_asof(
         me, idx[["date", "close_adj"]].sort_values("date"), on="date", direction="backward"
     )
-    idx_me["mkt"] = idx_me["close_adj"].pct_change()
+    idx_me["mkt_fwd"] = idx_me["close_adj"].shift(-1) / idx_me["close_adj"] - 1.0
     u_ret = raw.groupby("date")["ret_1m"].mean()
-    aligned = pd.DataFrame({"u": u_ret, "mkt": idx_me.set_index("date")["mkt"]}).dropna()
+    aligned = pd.DataFrame({"u": u_ret, "mkt": idx_me.set_index("date")["mkt_fwd"]}).dropna()
     target_sanity = {
         "mean_universe_monthly_ret": float(u_ret.mean()),
         "corr_vs_gspc": float(aligned["u"].corr(aligned["mkt"])) if len(aligned) > 12 else None,
-        "n_months": len(aligned),
+        "n_months": int(len(aligned)),
     }
 
     sizes = {p.name: p.stat().st_size for p in OUT.glob("*.parquet")}
