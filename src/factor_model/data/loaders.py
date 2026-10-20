@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import time
 
+import numpy as np
 import pandas as pd
 
 from factor_model.data.db import read_sql
@@ -370,3 +371,185 @@ def listed_on(sec: pd.DataFrame, dates: pd.Series) -> pd.DataFrame:
         pairs["last_trade_date"].isna() | (pairs["last_trade_date"] >= pairs["date"])
     )
     return pairs.loc[ok, ["date", "security_id"]].reset_index(drop=True)
+
+
+def prices_daily(
+    start: str,
+    end: str,
+    security_ids: Sequence[int] | None = None,
+    columns: Sequence[str] = ("close", "close_raw", "close_adj", "volume", "price_quality"),
+    dev: bool = False,
+) -> pd.DataFrame:
+    """Daily bars in ``[start, end]``. Optionally restrict to ``security_ids``."""
+    cols = ", ".join(["security_id", "date", *columns])
+    if security_ids is None:
+        df = read_sql(
+            f"""
+            SELECT {cols} FROM price_daily
+            WHERE date BETWEEN CAST(:start AS date) AND CAST(:end AS date)
+            """,
+            {"start": start, "end": end},
+            dev=dev,
+        )
+    else:
+        ids = [int(x) for x in security_ids]
+        df = read_sql(
+            f"""
+            SELECT {cols} FROM price_daily
+            WHERE date BETWEEN CAST(:start AS date) AND CAST(:end AS date)
+              AND security_id = ANY(:ids)
+            """,
+            {"start": start, "end": end, "ids": ids},
+            dev=dev,
+        )
+    df["date"] = pd.to_datetime(df["date"])
+    for col in columns:
+        if col != "price_quality":
+            df[col] = df[col].astype("float64")
+    return df
+
+
+def index_prices(
+    symbol: str = "^GSPC",
+    start: str | None = None,
+    end: str | None = None,
+    dev: bool = False,
+) -> pd.DataFrame:
+    """Index EOD from ``market.index_price_daily`` (not joined to ``security``)."""
+    df = read_sql(
+        """
+        SELECT date, close, close_adj, price_quality
+        FROM market.index_price_daily
+        WHERE symbol = :symbol
+          AND (CAST(:start AS date) IS NULL OR date >= CAST(:start AS date))
+          AND (CAST(:end AS date) IS NULL OR date <= CAST(:end AS date))
+        ORDER BY date
+        """,
+        {"symbol": symbol, "start": start, "end": end},
+        dev=dev,
+    )
+    df["date"] = pd.to_datetime(df["date"])
+    for col in ("close", "close_adj"):
+        df[col] = df[col].astype("float64")
+    return df
+
+
+def treasury_rates(start: str | None = None, end: str | None = None, dev: bool = False) -> pd.DataFrame:
+    """Daily Treasury curve; use ``month3`` as the risk-free rate."""
+    df = read_sql(
+        """
+        SELECT date, month1, month3, year1, year10
+        FROM treasury_rate
+        WHERE (CAST(:start AS date) IS NULL OR date >= CAST(:start AS date))
+          AND (CAST(:end AS date) IS NULL OR date <= CAST(:end AS date))
+        ORDER BY date
+        """,
+        {"start": start, "end": end},
+        dev=dev,
+    )
+    df["date"] = pd.to_datetime(df["date"])
+    for col in ("month1", "month3", "year1", "year10"):
+        df[col] = df[col].astype("float64")
+    return df
+
+
+def symbol_asof(keys: pd.DataFrame, history: pd.DataFrame | None = None, dev: bool = False) -> pd.Series:
+    """Ticker valid on each ``keys.date`` (half-open ``[valid_from, valid_to)``)."""
+    hist = history if history is not None else symbol_history(dev=dev)
+    left = keys[["security_id", "date"]].copy().reset_index(drop=True)
+    left["_i"] = left.index
+    left = left.sort_values("date")
+    right = hist.sort_values("valid_from")
+    m = pd.merge_asof(
+        left,
+        right.rename(columns={"valid_from": "_vf"}),
+        left_on="date",
+        right_on="_vf",
+        by="security_id",
+        direction="backward",
+    )
+    open_ok = m["valid_to"].isna() | (m["date"] < m["valid_to"])
+    m.loc[~open_ok, "symbol"] = pd.NA
+    return m.sort_values("_i")["symbol"].reset_index(drop=True)
+
+
+def asof_last_n_quarters(
+    keys: pd.DataFrame,
+    fund: pd.DataFrame,
+    n: int = 4,
+    max_staleness_days: int | None = 548,
+    cutoff: time = time(16, 0),
+    max_gap_days: int = 120,
+) -> pd.DataFrame:
+    """Last ``n`` quarterly rows public by cutoff for each key, wide-formatted.
+
+    Returns columns ``q0_<col>`` (latest) … ``q{n-1}_<col>``, plus ``ttm_ok``
+    (True when all ``n`` rows exist and consecutive fiscal ends are ≤ ``max_gap_days`` apart).
+    """
+    left = keys[["security_id", "date"]].copy().reset_index(drop=True)
+    left["_cutoff"] = asof_cutoff(left["date"], cutoff)
+    left["_row"] = left.index
+    value_cols = [
+        c
+        for c in fund.columns
+        if c
+        not in (
+            "security_id",
+            "date_available",
+            "date_source",
+            "filer_type",
+            "zero_lag_reimputed",
+        )
+    ]
+    out_frames: list[pd.DataFrame] = []
+    fund_sorted = fund.sort_values(["security_id", "date_available", "fiscal_period_end"])
+    for sid, gkeys in left.groupby("security_id", sort=False):
+        gf = fund_sorted[fund_sorted["security_id"] == sid]
+        if gf.empty:
+            continue
+        avail = gf["date_available"].to_numpy()
+        fpe = gf["fiscal_period_end"].to_numpy()
+        vals = {c: gf[c].to_numpy() for c in value_cols}
+        rows = []
+        for ridx, cut in zip(gkeys["_row"].to_numpy(), gkeys["_cutoff"].to_numpy(), strict=True):
+            # rightmost index with date_available <= cut
+            hi = avail.searchsorted(cut, side="right")
+            if hi == 0:
+                continue
+            end = hi - 1
+            if (
+                max_staleness_days is not None
+                and avail[end] < cut - pd.Timedelta(days=max_staleness_days)
+            ):
+                continue
+            # walk back by fiscal_period_end among rows with avail <= cut
+            idxs = []
+            last_fpe = None
+            for j in range(end, -1, -1):
+                if last_fpe is not None and fpe[j] >= last_fpe:
+                    continue  # same or later period (duplicate avail)
+                if last_fpe is not None and (last_fpe - fpe[j]) > np.timedelta64(max_gap_days, "D"):
+                    break
+                if last_fpe is not None and (last_fpe - fpe[j]) < np.timedelta64(1, "D"):
+                    continue
+                idxs.append(j)
+                last_fpe = fpe[j]
+                if len(idxs) == n:
+                    break
+            rec: dict = {"_row": ridx, "ttm_ok": len(idxs) == n}
+            for k, j in enumerate(idxs):
+                for c in value_cols:
+                    rec[f"q{k}_{c}"] = vals[c][j]
+                rec[f"q{k}_date_available"] = avail[j]
+                rec[f"q{k}_fiscal_period_end"] = fpe[j]
+            rows.append(rec)
+        if rows:
+            out_frames.append(pd.DataFrame(rows))
+    if not out_frames:
+        empty = left[["_row"]].copy()
+        empty["ttm_ok"] = False
+        return empty
+    wide = pd.concat(out_frames, ignore_index=True)
+    return left[["_row", "security_id", "date"]].merge(wide, on="_row", how="left").drop(
+        columns="_row"
+    )
