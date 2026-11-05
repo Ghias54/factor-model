@@ -1,12 +1,12 @@
 # Panel build report
 
-Built 2026-10-20 14:34 · sample 2006-01-31 → 2026-08-31.
+Built 2026-11-04 21:30 · sample 2006-01-31 → 2026-08-31.
 
 ## Universe
 
 - Months: 248 · rows: 248,000 · securities: 2,650
 - Top N: 1000 · min `close_raw`: $5.0
-- Vendor mcap fallback for ranking: 14,109 rows (5.69%)
+- Vendor mcap fallback for ranking: 14,107 rows (5.69%)
 - Months with fewer than 1000 names: none
 
 ### Stocks per December
@@ -53,7 +53,7 @@ Built 2026-10-20 14:34 · sample 2006-01-31 → 2026-08-31.
 | 2018 | 95 | 100 | 97 | 86 | 90 | 90 | 90 | 100 | 98 | 92 | 99 | 94 | 100 | 95 | 98 | 98 | 94 | 90 | 90 | 84 | 89 | 89 | 90 | 95 | 93 | 89 |
 | 2019 | 95 | 100 | 96 | 86 | 90 | 90 | 90 | 100 | 98 | 91 | 99 | 93 | 100 | 95 | 98 | 98 | 94 | 90 | 90 | 84 | 90 | 89 | 90 | 95 | 93 | 90 |
 | 2020 | 95 | 100 | 95 | 85 | 91 | 91 | 90 | 99 | 97 | 88 | 99 | 91 | 100 | 95 | 98 | 98 | 94 | 90 | 90 | 83 | 90 | 89 | 90 | 95 | 92 | 90 |
-| 2021 | 95 | 100 | 94 | 84 | 90 | 90 | 89 | 99 | 97 | 86 | 98 | 89 | 100 | 95 | 98 | 98 | 94 | 89 | 89 | 80 | 88 | 87 | 89 | 95 | 93 | 90 |
+| 2021 | 95 | 100 | 94 | 84 | 89 | 89 | 89 | 99 | 97 | 86 | 98 | 89 | 100 | 95 | 98 | 98 | 94 | 89 | 89 | 80 | 88 | 87 | 89 | 95 | 93 | 90 |
 | 2022 | 96 | 100 | 97 | 85 | 90 | 90 | 90 | 100 | 99 | 88 | 99 | 92 | 100 | 96 | 98 | 98 | 95 | 90 | 90 | 83 | 90 | 90 | 90 | 96 | 94 | 92 |
 | 2023 | 97 | 100 | 98 | 86 | 91 | 91 | 90 | 100 | 99 | 91 | 99 | 95 | 100 | 97 | 98 | 98 | 96 | 91 | 91 | 84 | 90 | 90 | 90 | 96 | 95 | 94 |
 | 2024 | 97 | 100 | 98 | 87 | 91 | 91 | 91 | 100 | 99 | 92 | 99 | 96 | 100 | 97 | 99 | 99 | 97 | 91 | 91 | 86 | 91 | 92 | 91 | 97 | 95 | 96 |
@@ -68,30 +68,30 @@ None.
 
 |  | median | p1 | p99 |
 |---|---|---|---|
-| value_bm | 0.332 | -0.08701 | 2.101 |
+| value_bm | 0.332 | -0.08699 | 2.101 |
 | size_ln_mcap | 23.12 | 20.97 | 26.81 |
-| momentum_12_1 | 0.1163 | -0.5668 | 1.812 |
+| momentum_12_1 | 0.1163 | -0.5668 | 1.818 |
 | quality_roe | 0.1272 | -0.8146 | 2.028 |
 | earnings_yield | 0.04369 | -0.2543 | 0.2443 |
-| sales_to_price | 0.4248 | 0.0001571 | 5.162 |
-| cashflow_to_price | 0.07153 | -0.1074 | 0.5123 |
-| reversal_1m | 0.01181 | -0.2447 | 0.3206 |
-| momentum_6m | 0.0658 | -0.493 | 1.055 |
-| reversal_36_13 | 0.2541 | -0.6667 | 3.408 |
-| volatility_12m | 0.0185 | 0.005909 | 0.06869 |
-| beta_60m | 1.023 | 0.0221 | 2.906 |
-| max_daily_ret_1m | 0.03283 | 0.007029 | 0.1986 |
-| turnover | 0.007248 | 4.617e-07 | 0.05891 |
+| sales_to_price | 0.4247 | 0.0001597 | 5.162 |
+| cashflow_to_price | 0.07152 | -0.1074 | 0.5123 |
+| reversal_1m | 0.01181 | -0.2449 | 0.3207 |
+| momentum_6m | 0.06581 | -0.493 | 1.056 |
+| reversal_36_13 | 0.2541 | -0.6667 | 3.409 |
+| volatility_12m | 0.0185 | 0.005909 | 0.06879 |
+| beta_60m | 1.023 | 0.02211 | 2.911 |
+| max_daily_ret_1m | 0.03283 | 0.007029 | 0.1988 |
+| turnover | 0.007248 | 4.617e-07 | 0.05897 |
 | dollar_volume_ln | 18.21 | 11.41 | 21.58 |
 | amihud | 1.703e-10 | 5.84e-12 | 3.999e-07 |
-| gross_margin | 0.444 | -0.1899 | 1 |
-| roa | 0.04836 | -0.3558 | 0.3137 |
+| gross_margin | 0.4439 | -0.1899 | 1 |
+| roa | 0.04835 | -0.3556 | 0.3137 |
 | gross_profit_to_assets | 0.2137 | -0.01527 | 1.132 |
-| delta_roe_4q | -0.007638 | -1.085 | 0.7729 |
+| delta_roe_4q | -0.007638 | -1.085 | 0.7727 |
 | revenue_growth_yoy | 0.06997 | -0.67 | 2.1 |
 | asset_growth_yoy | 0.05904 | -0.2956 | 2.312 |
-| accruals | -0.03675 | -0.3327 | 0.1446 |
-| debt_to_assets | 0.2626 | 0 | 0.9697 |
+| accruals | -0.03675 | -0.3325 | 0.1446 |
+| debt_to_assets | 0.2626 | 0 | 0.9717 |
 | current_ratio | 1.504 | 0.03056 | 43.01 |
 | sue | 0.0005526 | -0.02506 | 0.02238 |
 
@@ -112,10 +112,10 @@ None.
 
 ## Performance
 
-- Total wall: 877.6s · universe 128.45s · features 746.22s
-- Feature stage walls: `{"prices_month_end_s": 50.49, "fundamentals_s": 47.03, "earnings_s": 12.12, "macro_index_s": 7.55, "price_features_s": 0.95, "ttm_asof_s": 339.84, "sue_s": 2.08, "daily_prices_load_s": 216.65, "daily_features_s": 284.06, "beta_s": 1.24}`
-- Peak RSS: 2784 MB
-- Parquet sizes: {'panel.parquet': '27.9 MB', 'universe.parquet': '12.1 MB', 'features_raw.parquet': '52.0 MB'}
+- Total wall: 294.1s · universe 32.07s · features 260.68s
+- Feature stage walls: `{"prices_month_end_s": 12.68, "fundamentals_s": 15.51, "earnings_s": 4.43, "macro_index_s": 2.31, "price_features_s": 0.31, "ttm_asof_s": 117.09, "sue_s": 0.07, "daily_prices_load_s": 76.22, "daily_features_s": 107.75, "beta_s": 0.41}`
+- Peak RSS: 7329 MB
+- Parquet sizes: {'features_raw.parquet': '52.0 MB', 'panel.parquet': '28.0 MB', 'universe.parquet': '12.1 MB'}
 
 ## Lookahead
 

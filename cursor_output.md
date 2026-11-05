@@ -1,102 +1,117 @@
-# Cursor output — feat/panel
+# Cursor Output — feat/panel-ms02-rebuild
 
-Date: 2026-10-20 · Branch: `feat/panel` (from `main` @ `1373836`) · Pushed, **not** merged.
+Date: 2026-11-04
+Host: `ms02` · cores: **24** · RAM: **30 GiB**
 
-## 0. Merge `chore/lock-decisions` → main (Approved by Rehan 2026-10-20)
+## Resolved DB
 
-| | |
+| Field | Value |
 |---|---|
-| Merge commit | `1373836` Merge chore/lock-decisions into main. Approved by Rehan 2026-10-20. |
-| Strategy | `--no-ff` |
-| Tests after merge | `pytest`: **12 passed** (pre-panel); after panel work: **16 passed** |
-| Then | `git checkout -b feat/panel` |
+| DSN key | `STOCKDB_DSN` |
+| Host | `127.0.0.1` |
+| Port | `5432` |
+| Database | `stockdb` |
+| Server addr | `127.0.0.1` (local Postgres 18.6) |
+| Tradinghost / Tailscale? | **No** — already pointed at MS-02 local |
 
-## Branch commits (`feat/panel` not in `main`)
+`.env.example` comment updated (was still saying “on tradinghost”). No secrets changed.
+
+## Branch
+
+Branched from **`feat/panel`** (not `main`): panel compute/universe/loaders are not on `main` yet. Per workspace rules, when a task depends on an unmerged branch, branch from that branch.
 
 ```
-0edbcdd Add cursor_task for feat/panel
-479f8cb Extend loaders for daily prices, index, treasury, and TTM as-of
-e75e6d8 Add monthly top-N universe builder
-191063c Add 26-feature panel compute, preprocess, CLI, lookahead tests
-c7a50e0 Fix symbol_asof: interval join and index-aligned assignment
-273cb2e Speed up asof_last_n_quarters with per-security index
-320c6f0 Chunk daily price loads for vol/Amihud to fit in RAM
-(+ final: panel-report + GSPC target-sanity corr fix)
+feat/panel-ms02-rebuild
 ```
 
-## Universe
+### Commits on this branch (beyond `feat/panel`)
 
-| Metric | Value |
+| SHA | Message |
 |---|---|
-| Months | 248 (2006-01-31 → 2026-08-31) |
-| Rows | 248,000 (exactly 1000 every month; none below) |
-| Distinct securities | 2,650 |
-| Vendor mcap fallback | 14,109 rows (5.69%) when diluted shares missing |
-| Min `close_raw` | $5.0 |
-| mcap | `close × weighted_average_shares_diluted` (PIT + zero-lag guard) |
+| `672ff5e` | Add cursor_task for MS-02 panel rebuild from local stockdb. |
+| `4afae47` | Raise MS-02 panel compute: larger daily chunks, full-core TTM/daily threads. |
+| `5db4628` | Normalize loader datetimes to datetime64[ns] for Postgres 18. |
+| `3dc7334` | Harden remaining date casts to datetime64[ns] in panel compute. |
+| *(final)* | Panel report + compare script + cursor_output |
 
-## Feature coverage
+## What was done
 
-Full table in `docs/panel-report.md`. **No feature below 70% in any year.**
+1. Confirmed DB → MS-02 local `127.0.0.1/stockdb`.
+2. Moved `data/panel/` → `data/panel_tradinghost_backup/` (untracked; kept).
+3. Raised compute knobs in `configs/default.yaml`:
+   - `daily_price_chunk: 800` (was hardcoded 150)
+   - `daily_feature_n_jobs: -1` (was capped at 8)
+   - Parallelized `asof_last_n_quarters` with `n_jobs=-1` (threads)
+4. Fixed Postgres-18 `datetime64[s]` vs `[ns]` `merge_asof` breakage via `_to_dt64ns` in loaders.
+5. Rebuilt panel with `python scripts/build_panel.py` (universe + features + report).
+6. Compared new vs tradinghost backup (`scripts/compare_panels.py`).
+7. Ran full pytest (incl. `tests/test_panel_lookahead.py`).
+8. Regenerated `docs/panel-report.md`.
 
-Weakest early years (still ≥70%): `reversal_36_13` ~75% in 2006–07; `beta_60m` ~77% in 2006; `delta_roe_4q` / quality-ish fundamentals mid-70s–80s early sample. Coverage rises through 2025–26.
+## Wall times
 
-## Lookahead tests
+| Stage | Tradinghost backup | MS-02 rebuild |
+|---|---:|---:|
+| Universe | 128.45s | **32.07s** |
+| Features | 746.22s | **260.68s** |
+| **Total** | **877.6s** | **294.1s** (`/usr/bin/time`: 5:00) |
 
-`tests/test_panel_lookahead.py` — sample of 200 `(security_id, month)` rows:
+Feature stage walls (MS-02): prices_me 12.7 · fund 15.5 · earn 4.4 · macro 2.3 · px_feat 0.3 · **ttm_asof 117.1** · sue 0.1 · daily_load 76.2 · daily_feat 107.8 · beta 0.4
 
-- Fundamentals: `date_available` ≤ 16:00 ET on month-end `t`
-- Earnings: `report_date` < `t` (SUE)
+Peak RSS: **7329 MB** (`/usr/bin/time` Max RSS 7505208 KB ≈ 7.3 GiB). Cores available: 24. Joblib threads are GIL-bound on the Python TTM/daily loops, so wall CPU ≈ 99% of one process rather than 24×; larger chunks + more threads still cut wall ~3× vs tradinghost.
 
-`pytest`: **16 passed** (including 4 lookahead).
+## New panel counts
 
-## Spot checks / mcap / target
+| Metric | Backup | New |
+|---|---:|---:|
+| Rows | 248,000 | 248,000 |
+| Months | 248 | 248 |
+| Features | 26 | 26 (identical list) |
+| Securities | 2,650 | 2,650 |
+| Vendor mcap fallback rows | 14,109 | 14,107 |
 
-| Check | Result |
+Per-month universe size: all 248 months have exactly 1000 names; max \|Δn\| vs backup = 0.
+
+## New vs backup comparison
+
+**No feature flagged at >1%** (null-rate absolute or mean relative). Aggregate mean/std/null are essentially identical.
+
+Not bitwise-identical (DB is close but not a frozen snapshot of the tradinghost build):
+
+| Issue | Detail |
 |---|---|
-| AAPL | 248 months, 2006-01-31 → 2026-08-31 |
-| SIVB | 201 months through **2023-02-28**; present Feb-2023, **absent** Mar-2023 |
-| mcap vs vendor `market_cap_daily` | median ratio **1.008**; 94.6% within ±20% (n=246,217) |
-| Mean EW universe monthly return | **0.860%** |
-| Corr vs ^GSPC (same t→t+1 window) | **0.935** (n=247) |
+| 42 universe membership swaps | Same months, different rank-1000 boundary names. MS-02 includes **KNDI** (`security_id=10012`, 25 months 2013-12→2016-03) and **GP** (`9909`, 17 months 2020-08→2021-12) at mid-universe ranks, displacing the previous rank-1000 names. Likely share-count / mcap history updates on MS-02 after the tradinghost panel was built (vendor fallback count also −2). |
+| Inner-join rows | 247,958 / 248,000 |
+| Exact float diffs | `beta_60m` ~58k rows differ at float noise only (`np.isclose` OK). Real content diffs: **sue** 11 rows (DHC, AYRO, CRH — earnings estimate revisions), and **delta_roe_4q / revenue_growth_yoy / asset_growth_yoy** filled for one previously-null row (`security_id=7088`, 2006-01-31). |
 
-Note: an earlier report draft compared forward stock returns to *trailing* GSPC pct_change (~0.05 corr). Fixed in `write_report` to use GSPC forward return aligned with `ret_1m`.
+**Judgment:** Exact equality was expected only if the DB were a faithful frozen copy. MS-02 stockdb has small PIT updates vs the Oct 20 tradinghost extract; aggregate stats and universe size match; no >1% feature drift.
 
-## Artifacts (gitignored under `data/`)
+## Tests
 
-| File | Size |
-|---|---|
-| `data/panel/universe.parquet` | 12 MB |
-| `data/panel/features_raw.parquet` | 50 MB |
-| `data/panel/panel.parquet` | 27 MB |
-| plus `*_meta.json`, `report_extras.json` | |
+```
+pytest -q  →  16 passed in 0.89s
+```
 
-Processed panel: Gu–Kelly–Xiu rank → [-1,1], missing → 0, plus `ret_1m`, `excess_ret_1m`, `target_rank`.
+Includes `tests/test_panel_lookahead.py`.
 
-## Performance (tradinghost)
+## Files changed
 
-| | |
-|---|---|
-| Total wall | **877.6 s** (~14.6 min) |
-| Universe | 128.5 s |
-| Features | 746.2 s (TTM as-of 340 s; daily load 217 s; daily features 284 s) |
-| Peak RSS | **2784 MB** |
-| Parallelism | batched DB reads; daily prices in chunks of 150 securities (avoided ~8 GB OOM) |
+- `cursor_task.md` / `cursor_output.md`
+- `configs/default.yaml` — MS-02 compute knobs
+- `.env.example` — host comment (MS-02 local)
+- `src/factor_model/data/loaders.py` — `_to_dt64ns`, parallel TTM asof
+- `src/factor_model/features/compute.py` — config-driven chunk/threads; ns casts
+- `scripts/compare_panels.py` — new compare CLI
+- `docs/panel-report.md` — regenerated from MS-02 build
 
-## Judgment calls
+Untracked (intentionally): `data/panel/`, `data/panel_tradinghost_backup/`
 
-1. Vendor mcap used only for **ranking** when diluted shares missing (counted); size feature still uses computed mcap where available.
-2. Delisting: return to last non-suspect `close_adj` through next month-end when possible.
-3. TTM requires 4 consecutive quarters; else NaN (not partial sum).
-4. Did **not** use `stock-database` monthly_panel builder.
-5. Daily price load chunked to stay under RAM; not full `n_jobs=-1` across months for that stage (memory-bound).
+## Not done / skipped
 
-## NOT done / skipped
-
-- Classic single-factor portfolios / FF check
-- Any ML models, CV, SHAP, backtests
-- Merging `feat/panel` into `main` (human merges)
-- Holdout fitting/tuning (holdout untouched)
-- Writing to the stock database / schema changes
-- Zero-lag fundamentals DB repair (loaders still guard)
-- Refetch of pre-2005 truncated prices
+- Did **not** change feature definitions, universe rule, sample window, or holdout.
+- Did **not** build classic factors, Fama-French validation, or any models.
+- Did **not** delete `data/panel_tradinghost_backup/`.
+- Did **not** merge to `main`.
+- Did **not** re-parallelize with processes (would copy large fund/price frames); threads remain GIL-limited.
+- Did **not** investigate root cause of KNDI/GP mcap divergence in stock-database (flag for DB audit if needed).
+- README / docs/plan still mention “tradinghost” in prose; left alone (task said config only).
