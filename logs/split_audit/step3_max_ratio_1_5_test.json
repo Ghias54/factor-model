@@ -1,0 +1,287 @@
+{
+  "wall_s": 11.04,
+  "meta_max_ratio_1_5": {
+    "n_months": 248,
+    "n_rows": 248000,
+    "n_securities": 2662,
+    "months_below_top_n": {},
+    "n_vendor_mcap_fallback": 22169,
+    "pct_vendor_mcap_fallback": 0.08939112903225807,
+    "n_mcap_sanity_replaced": 8064,
+    "mcap_vendor_sanity": {
+      "enabled": true,
+      "max_ratio": 1.5
+    },
+    "wall_s": 10.45,
+    "start": "2006-01-31",
+    "end": "2026-08-31",
+    "top_n": 1000,
+    "min_price": 5.0
+  },
+  "meta_current_max_ratio_3": {
+    "n_months": 248,
+    "n_rows": 248000,
+    "n_securities": 2651,
+    "months_below_top_n": {},
+    "n_vendor_mcap_fallback": 17088,
+    "pct_vendor_mcap_fallback": 0.06890322580645161,
+    "n_mcap_sanity_replaced": 2977,
+    "mcap_vendor_sanity": {
+      "enabled": true,
+      "max_ratio": 3.0
+    },
+    "wall_s": 32.54,
+    "start": "2006-01-31",
+    "end": "2026-08-31",
+    "top_n": 1000,
+    "min_price": 5.0
+  },
+  "n_sanity_replaced_1_5": 8064,
+  "n_sanity_replaced_3": 2977,
+  "membership_dropped": 1261,
+  "membership_added": 1261,
+  "top20_dropped": [
+    {
+      "security_id": 4855,
+      "symbol": "MDU",
+      "n_months": 126,
+      "med_rank": 844.5
+    },
+    {
+      "security_id": 8067,
+      "symbol": "VLYPO",
+      "n_months": 99,
+      "med_rank": 701.0
+    },
+    {
+      "security_id": 2627,
+      "symbol": "ESRT",
+      "n_months": 56,
+      "med_rank": 825.0
+    },
+    {
+      "security_id": 7122,
+      "symbol": "SNX",
+      "n_months": 48,
+      "med_rank": 917.5
+    },
+    {
+      "security_id": 8297,
+      "symbol": "WOR",
+      "n_months": 45,
+      "med_rank": 920.0
+    },
+    {
+      "security_id": 6137,
+      "symbol": "POST",
+      "n_months": 45,
+      "med_rank": 811.0
+    },
+    {
+      "security_id": 10025,
+      "symbol": "LBTYB",
+      "n_months": 39,
+      "med_rank": 754.0
+    },
+    {
+      "security_id": 5657,
+      "symbol": "OGCP",
+      "n_months": 32,
+      "med_rank": 804.5
+    },
+    {
+      "security_id": 5001,
+      "symbol": "MLI",
+      "n_months": 26,
+      "med_rank": 834.0
+    },
+    {
+      "security_id": 1049,
+      "symbol": "BKI",
+      "n_months": 25,
+      "med_rank": 776.0
+    },
+    {
+      "security_id": 8066,
+      "symbol": "VLYPN",
+      "n_months": 24,
+      "med_rank": 657.0
+    },
+    {
+      "security_id": 8406,
+      "symbol": "XPO",
+      "n_months": 21,
+      "med_rank": 796.0
+    },
+    {
+      "security_id": 250,
+      "symbol": "AGNCO",
+      "n_months": 18,
+      "med_rank": 678.5
+    },
+    {
+      "security_id": 6710,
+      "symbol": "RYAN",
+      "n_months": 17,
+      "med_rank": 693.0
+    },
+    {
+      "security_id": 248,
+      "symbol": "AGNCM",
+      "n_months": 17,
+      "med_rank": 686.0
+    },
+    {
+      "security_id": 249,
+      "symbol": "AGNCN",
+      "n_months": 17,
+      "med_rank": 633.0
+    },
+    {
+      "security_id": 2184,
+      "symbol": "DHCNI",
+      "n_months": 16,
+      "med_rank": 915.0
+    },
+    {
+      "security_id": 5706,
+      "symbol": "ONBPO",
+      "n_months": 14,
+      "med_rank": 894.0
+    },
+    {
+      "security_id": 7650,
+      "symbol": "TPG",
+      "n_months": 14,
+      "med_rank": 795.0
+    },
+    {
+      "security_id": 2185,
+      "symbol": null,
+      "n_months": 12,
+      "med_rank": 852.5
+    }
+  ],
+  "top20_added": [
+    {
+      "security_id": 7001,
+      "symbol": "SJI",
+      "n_months": 100,
+      "med_rank": 792.5
+    },
+    {
+      "security_id": 5945,
+      "symbol": "PEB",
+      "n_months": 98,
+      "med_rank": 819.0
+    },
+    {
+      "security_id": 8046,
+      "symbol": "VIRT",
+      "n_months": 61,
+      "med_rank": 855.0
+    },
+    {
+      "security_id": 5473,
+      "symbol": "NSS",
+      "n_months": 49,
+      "med_rank": 871.0
+    },
+    {
+      "security_id": 8494,
+      "symbol": "ZIONO",
+      "n_months": 34,
+      "med_rank": 892.0
+    },
+    {
+      "security_id": 6408,
+      "symbol": "RAVN",
+      "n_months": 33,
+      "med_rank": 942.0
+    },
+    {
+      "security_id": 8493,
+      "symbol": "ZIONL",
+      "n_months": 33,
+      "med_rank": 896.0
+    },
+    {
+      "security_id": 7889,
+      "symbol": "UNMA",
+      "n_months": 32,
+      "med_rank": 768.0
+    },
+    {
+      "security_id": 8184,
+      "symbol": "WALA",
+      "n_months": 31,
+      "med_rank": 869.0
+    },
+    {
+      "security_id": 5818,
+      "symbol": "OWL",
+      "n_months": 31,
+      "med_rank": 675.0
+    },
+    {
+      "security_id": 6416,
+      "symbol": "RBCP",
+      "n_months": 27,
+      "med_rank": 917.0
+    },
+    {
+      "security_id": 2027,
+      "symbol": "CVNA",
+      "n_months": 16,
+      "med_rank": 851.0
+    },
+    {
+      "security_id": 1726,
+      "symbol": "CMSA",
+      "n_months": 16,
+      "med_rank": 583.0
+    },
+    {
+      "security_id": 5113,
+      "symbol": "MRVI",
+      "n_months": 15,
+      "med_rank": 887.0
+    },
+    {
+      "security_id": 9797,
+      "symbol": "DNN",
+      "n_months": 12,
+      "med_rank": 858.5
+    },
+    {
+      "security_id": 424,
+      "symbol": "AMC",
+      "n_months": 11,
+      "med_rank": 730.0
+    },
+    {
+      "security_id": 6474,
+      "symbol": "REGCO",
+      "n_months": 10,
+      "med_rank": 683.0
+    },
+    {
+      "security_id": 9677,
+      "symbol": "BIP",
+      "n_months": 9,
+      "med_rank": 890.0
+    },
+    {
+      "security_id": 6537,
+      "symbol": "RIGL",
+      "n_months": 9,
+      "med_rank": 739.0
+    },
+    {
+      "security_id": 5081,
+      "symbol": "MPLX",
+      "n_months": 8,
+      "med_rank": 939.0
+    }
+  ]
+}
