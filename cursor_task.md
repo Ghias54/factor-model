@@ -1,40 +1,26 @@
 # Cursor Task - FE-Factor-Model
-Date: 2026-10-20 13:41:54
+Date: 2026-11-04 21:20:09
 From: Claude (claude.ai)
 Repo: /home/rehan-ghias/FE-Factor-Model
-Branch: feat/panel
-Priority: HIGH
+Branch: feat/panel-ms02-rebuild
+Priority: High
 
 ## Context
-All design decisions are locked in docs/design-decisions-2026-10-20.md and configs/default.yaml (on chore/lock-decisions). Read both, plus docs/data-dictionary.md and docs/data-audit.md, before writing code. Use only the existing read-only loaders in src/factor_model/data/ (extend them if needed); never use stock-database's monthly_panel builder (wrong mcap, no zero-lag guard). Rehan approved merging chore/lock-decisions on 2026-10-20.
+The repo moved from tradinghost to MS-02 on Oct 26 2026. data/panel/* was rsynced over but was built from tradinghost's database. The stock database now lives on MS-02, and the panel must be rebuilt from it so everything downstream (classic factors, Fama-French validation, models) is sourced from the MS-02 DB. Design decisions are locked in docs/design-decisions-2026-10-20.md (top 1000 by mcap at >= $5 re-ranked monthly, 2006-01-31 to 2026-08-31, 26 features, holdout from 2024-01-31). Previous build: 248,000 rows, 248 months, 26 features, ~746s wall with n_jobs=-1.
 
 ## Task
-0. Merge `chore/lock-decisions` into main (Approved by Rehan 2026-10-20): `git checkout main && git pull && git merge --no-ff chore/lock-decisions`, run pytest, push. Then `git checkout -b feat/panel`.
+1. Confirm .env / config points at MS-02's local Postgres (not tradinghost's Tailscale address). Print the resolved host/db name (no password) in the output. If anything still points at tradinghost, fix it in config only, not .env.example secrets.
+2. Back up the current outputs: move data/panel/ to data/panel_tradinghost_backup/ (keep it untracked, same as data/panel).
+3. Run the existing pipeline (scripts/build_panel.py, plus the universe build if it's a separate step) unchanged against MS-02's DB. Maximize compute on MS-02: n_jobs=-1, and raise any worker/chunk/thread settings so all cores and available RAM are used; report core count and peak memory.
+4. Compare new vs backup: row count, month count, feature list, per-month universe size, and per-feature mean/std/null-rate. Flag any feature where null rate or mean differs by more than 1% and explain why if possible. Exact equality is expected if the DB is a faithful copy.
+5. Run the full test suite, including tests/test_panel_lookahead.py, against the new panel.
+6. Regenerate docs/panel-report.md from the new build.
 
-1. Universe (src/factor_model/universe/): for each month-end t from 2006-01-31 to 2026-08-31 (use loaders.month_ends(complete_only=True)), take securities with a non-suspect price at t, `close_raw` ≥ 5, mcap = `close × weighted_average_shares_diluted` (as-of date_available with the zero-lag guard; fall back to vendor market_cap_daily only for ranking if shares missing, and count how often), rank by mcap, keep top 1000. Output data/panel/universe.parquet (date, security_id, symbol at t, mcap, rank).
-
-2. Target: next-month return t→t+1 from close_adj (exclude suspect rows). If a name delists during t+1, use the return to its final price (later of vendor last_trade_date and last price). Also store raw return, excess return over month3 T-bill, and cross-sectional rank of next-month return scaled to [0,1].
-
-3. Features (src/factor_model/features/): compute the 26 features exactly as defined in docs/design-decisions-2026-10-20.md §5, all point-in-time at 16:00 ET on t. Fundamentals: quarterly rows only, asof date_available, staleness ≤ 548 days, TTM = sum of last 4 quarters (require 4 consecutive quarters, else NaN). ROE NaN if equity ≤ 0. SUE from earnings_event with report_date < t, ≤ 120 days old, drop 1970-01-01 junk and future rows. Price features from daily close_adj; beta = 60-month monthly regression on ^GSPC (min 24 months). Store raw feature values in data/panel/features_raw.parquet.
-
-4. Preprocessing: each month, rank each feature cross-sectionally, scale to [-1,1], missing → 0. Save data/panel/panel.parquet (date, security_id, 26 processed features, target columns). Keep raw and processed separate.
-
-5. Checks, written to docs/panel-report.md:
-   - Stocks per month (should be 1000; list any month below).
-   - Per-feature coverage (% non-missing raw) by year, and flag any feature < 70% in any year.
-   - Lookahead tests: for a random sample of 200 (security, month) rows assert every fundamental used has date_available ≤ 16:00 ET on t and every earnings event report_date < t. Add these as unit/dev tests in tests/.
-   - Sanity: summary stats per raw feature (median, p1, p99); cross-check mcap vs vendor market_cap_daily (median ratio); spot-check AAPL and SIVB rows (SIVB present until 2023-02, absent after).
-   - Target sanity: mean monthly return of the universe vs ^GSPC monthly return correlation.
-
-6. Performance: maximize tradinghost compute — batched DB reads (one query per table), vectorized pandas/polars, parallelize per-month or per-feature work across all cores. Report wall time and peak memory. Mind disk (~6.9 GB free): parquet with compression only, nothing written to the database.
-
-7. Do NOT build the classic factor portfolios, FF check, or any models in this task.
-
-Rules: point-in-time only; no survivorship shortcuts (never use today's lists); commit as you go; push feat/panel; do NOT merge feat/panel (human merges). data/ stays gitignored.
+Do NOT: change feature definitions, the universe rule, the sample window, or the holdout date. Do NOT start building the classic factors, Fama-French validation, or any models. Do NOT delete the backup folder. Do NOT merge to main; leave the branch for Rehan to review.
 
 ## Rules
 - Read existing files before editing; keep changes minimal and localized
-- ONE feature per branch: git checkout -b feat/panel from main (or continue it if it exists)
+- ONE feature per branch: git checkout -b feat/panel-ms02-rebuild from main (or continue it if it exists)
 - Commit as you go. Push the branch. Do NOT merge to main - the human merges one by one
 - Point-in-time only: every feature at month-end t must use data available as of t
   (fundamentals on filing/acceptance date, not period end; no restated values)
@@ -44,10 +30,10 @@ Rules: point-in-time only; no survivorship shortcuts (never use today's lists); 
 - Heavy compute (loads, feature builds, training, CV): maximize tradinghost resources
   (parallelize across all cores, n_jobs=-1, batch DB reads)
 - After completing, write results to cursor_output.md
-- Before finishing: git add -A && git commit -m "<msg>" && git push -u origin feat/panel
+- Before finishing: git add -A && git commit -m "<msg>" && git push -u origin feat/panel-ms02-rebuild
 
 ## Expected Output in cursor_output.md
-In cursor_output.md: merge commit for chore/lock-decisions and test results; feat/panel branch and commit list; universe counts summary; feature coverage table by year with flagged weak features; lookahead test results; mcap cross-check and AAPL/SIVB spot checks; target sanity numbers; file sizes; wall time and peak memory; judgment calls; explicit list of what was NOT done or skipped.
+In cursor_output.md: resolved DB host, wall time per stage + total, cores/peak RAM used, row/month/feature counts, the new-vs-backup comparison table with any >1% diffs explained, test results, list of files changed, and a section titled "Not done / skipped" listing anything left out.
 
 ## Status
 [ ] Not started
