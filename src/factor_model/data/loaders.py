@@ -382,7 +382,7 @@ def listed_on(sec: pd.DataFrame, dates: pd.Series) -> pd.DataFrame:
     Uses only listing dates, never today's status, so delisted names stay in.
     """
     sec = sec[["security_id", "first_trade_date", "last_trade_date"]]
-    d = pd.DataFrame({"date": _to_dt64ns(pd.Series(pd.to_datetime(dates)))})
+    d = pd.DataFrame({"date": _to_dt64ns(pd.Series(dates))})
     pairs = d.merge(sec, how="cross")
     ok = (pairs["first_trade_date"].isna() | (pairs["first_trade_date"] <= pairs["date"])) & (
         pairs["last_trade_date"].isna() | (pairs["last_trade_date"] >= pairs["date"])

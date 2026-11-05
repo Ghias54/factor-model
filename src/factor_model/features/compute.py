@@ -43,7 +43,7 @@ FEATURE_NAMES = [
 
 
 def _month_end_lags(me: pd.Series) -> pd.DataFrame:
-    me = pd.to_datetime(me).sort_values().reset_index(drop=True)
+    me = pd.to_datetime(me).astype("datetime64[ns]").sort_values().reset_index(drop=True)
     df = pd.DataFrame({"date": me})
     for lag in (1, 6, 12, 13, 36):
         df[f"me_m{lag}"] = me.shift(lag)
@@ -375,7 +375,7 @@ def compute_targets_and_features(
     px_beta = px_beta.sort_values(["security_id", "date"])
     px_beta["ret"] = px_beta.groupby("security_id")["close_adj"].pct_change()
     idx_me = pd.merge_asof(
-        pd.DataFrame({"date": pd.to_datetime(me_ext)}),
+        pd.DataFrame({"date": pd.to_datetime(me_ext).astype("datetime64[ns]")}),
         idx[["date", "close_adj"]].sort_values("date"),
         on="date",
         direction="backward",
