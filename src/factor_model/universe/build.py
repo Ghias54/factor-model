@@ -25,6 +25,31 @@ FEATURE_FUND_COLS = (
 )
 
 
+def apply_mcap_vendor_sanity(
+    mcap_computed: pd.Series,
+    mcap_vendor: pd.Series,
+    *,
+    enabled: bool,
+    max_ratio: float = 3.0,
+) -> tuple[pd.Series, pd.Series]:
+    """Return (mcap, sanity_replaced) preferring vendor when ratio is extreme.
+
+    Catches reverse-split restatements that update ``close`` but leave WAS shares
+    on the old share basis (computed mcap inflated vs vendor).
+    """
+    mcap = mcap_computed.copy()
+    replaced = pd.Series(False, index=mcap_computed.index, dtype=bool)
+    if not enabled or max_ratio <= 1:
+        mcap = mcap.fillna(mcap_vendor)
+        return mcap, replaced
+    both = mcap_computed.notna() & mcap_vendor.notna() & (mcap_vendor > 0)
+    ratio = mcap_computed / mcap_vendor
+    bad = both & ((ratio > max_ratio) | (ratio < 1.0 / max_ratio))
+    replaced = bad.fillna(False).astype(bool)
+    mcap = mcap_computed.where(~replaced, mcap_vendor).fillna(mcap_vendor)
+    return mcap, replaced
+
+
 def build_universe(
     start: str | None = None,
     end: str | None = None,
@@ -83,8 +108,19 @@ def build_universe(
         on=["security_id", "date"],
         how="left",
     )
-    elig["mcap_from_vendor"] = elig["mcap_computed"].isna() & elig["mcap_vendor"].notna()
-    elig["mcap"] = elig["mcap_computed"].fillna(elig["mcap_vendor"])
+    sanity = cfg.get("universe", {}).get("mcap_vendor_sanity") or {}
+    sanity_on = bool(sanity.get("enabled", False))
+    max_ratio = float(sanity.get("max_ratio", 3.0))
+    elig["mcap"], elig["mcap_sanity_replaced"] = apply_mcap_vendor_sanity(
+        elig["mcap_computed"],
+        elig["mcap_vendor"],
+        enabled=sanity_on,
+        max_ratio=max_ratio,
+    )
+    elig["mcap_from_vendor"] = (
+        (elig["mcap_computed"].isna() & elig["mcap_vendor"].notna())
+        | elig["mcap_sanity_replaced"]
+    )
     elig = elig[elig["mcap"].notna() & (elig["mcap"] > 0)].copy()
 
     elig["rank"] = elig.groupby("date")["mcap"].rank(ascending=False, method="first").astype(int)
@@ -104,6 +140,8 @@ def build_universe(
         "months_below_top_n": univ.groupby("date").size().loc[lambda s: s < top_n].to_dict(),
         "n_vendor_mcap_fallback": int(univ["mcap_from_vendor"].sum()),
         "pct_vendor_mcap_fallback": float(univ["mcap_from_vendor"].mean()),
+        "n_mcap_sanity_replaced": int(univ["mcap_sanity_replaced"].sum()),
+        "mcap_vendor_sanity": {"enabled": sanity_on, "max_ratio": max_ratio},
         "wall_s": round(time.perf_counter() - t0, 2),
         "start": str(pd.Timestamp(start).date()),
         "end": str(pd.Timestamp(end).date()),
@@ -127,6 +165,7 @@ def build_universe(
         "mcap_computed",
         "mcap_vendor",
         "mcap_from_vendor",
+        "mcap_sanity_replaced",
         "weighted_average_shares",
         "weighted_average_shares_diluted",
         "date_available",

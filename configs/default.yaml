@@ -16,6 +16,12 @@ universe:
   market_cap: close_x_shares_diluted  # close × weighted_average_shares_diluted; never close_adj × shares
   membership: non_suspect_price_at_t
   delisting_return: partial_month_to_last_price
+  # When close is restated for a reverse split but WAS shares are not, computed
+  # mcap is inflated vs vendor market_cap_daily. Prefer vendor when the ratio
+  # is outside [1/max_ratio, max_ratio]. DB-level fix: restate historical WAS.
+  mcap_vendor_sanity:
+    enabled: true
+    max_ratio: 3.0
 
 target:
   type: rank                   # cross-sectional rank of next-month return, scaled to [-1, 1]
