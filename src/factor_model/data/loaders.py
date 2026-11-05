@@ -23,6 +23,14 @@ from factor_model.data.db import read_sql
 
 NY_TZ = "America/New_York"
 
+
+def _to_dt64ns(s: pd.Series, *, utc: bool = False) -> pd.Series:
+    """Normalize DB/pandas datetimes to datetime64[ns] (Postgres 18 may yield [s])."""
+    out = pd.to_datetime(s, utc=True) if utc else pd.to_datetime(s)
+    if utc:
+        return out.astype("datetime64[ns, UTC]")
+    return out.astype("datetime64[ns]")
+
 FUNDAMENTAL_COLUMNS = (
     "revenue",
     "gross_profit",
@@ -96,7 +104,7 @@ def month_ends(
         {"start": start, "end": end},
         dev=dev,
     )
-    dates = pd.to_datetime(df["date"])
+    dates = _to_dt64ns(df["date"])
     if complete_only:
         last_bday = dates + pd.offsets.BMonthEnd(0)
         partial = df["is_last_loaded"] & ((last_bday - dates).dt.days > 3)
@@ -125,7 +133,7 @@ def securities(dev: bool = False) -> pd.DataFrame:
         dev=dev,
     )
     for col in ("first_trade_date", "last_trade_date"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     return df
 
 
@@ -133,7 +141,7 @@ def symbol_history(dev: bool = False) -> pd.DataFrame:
     """Ticker ranges, half-open ``[valid_from, valid_to)``."""
     df = read_sql("SELECT security_id, symbol, valid_from, valid_to FROM symbol_history", dev=dev)
     for col in ("valid_from", "valid_to"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     return df
 
 
@@ -149,7 +157,7 @@ def prices_on_dates(dates: Sequence, dev: bool = False) -> pd.DataFrame:
         {"dates": dates},
         dev=dev,
     )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     for col in ("close", "close_raw", "close_adj", "volume"):
         df[col] = df[col].astype("float64")
     return df
@@ -175,7 +183,7 @@ def price_span(dev: bool = False) -> pd.DataFrame:
         dev=dev,
     )
     for col in ("first_price_date", "last_price_date"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     for col in ("last_close", "last_close_raw", "last_close_adj", "last_volume"):
         df[col] = df[col].astype("float64")
     return df
@@ -235,8 +243,8 @@ def fundamentals(
         """,
         dev=dev,
     )
-    df["fiscal_period_end"] = pd.to_datetime(df["fiscal_period_end"])
-    df["date_available"] = pd.to_datetime(df["date_available"], utc=True)
+    df["fiscal_period_end"] = _to_dt64ns(df["fiscal_period_end"])
+    df["date_available"] = _to_dt64ns(df["date_available"], utc=True)
     for col in columns:
         df[col] = df[col].astype("float64")
     return guard_zero_lag(df) if guard else df
@@ -308,7 +316,7 @@ def earnings_events(dev: bool = False) -> pd.DataFrame:
         dev=dev,
     )
     for col in ("report_date", "last_updated"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     for col in ("eps_actual", "eps_estimated", "revenue_actual", "revenue_estimated"):
         df[col] = df[col].astype("float64")
     return df
@@ -347,7 +355,7 @@ def analyst_estimates(dev: bool = False) -> pd.DataFrame:
         """,
         dev=dev,
     )
-    df["target_period"] = pd.to_datetime(df["target_period"])
+    df["target_period"] = _to_dt64ns(df["target_period"])
     return df
 
 
@@ -363,7 +371,7 @@ def vendor_market_cap_on_dates(dates: Sequence, dev: bool = False) -> pd.DataFra
         {"dates": dates},
         dev=dev,
     )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     df["market_cap"] = df["market_cap"].astype("float64")
     return df
 
@@ -374,7 +382,7 @@ def listed_on(sec: pd.DataFrame, dates: pd.Series) -> pd.DataFrame:
     Uses only listing dates, never today's status, so delisted names stay in.
     """
     sec = sec[["security_id", "first_trade_date", "last_trade_date"]]
-    d = pd.DataFrame({"date": pd.to_datetime(dates)})
+    d = pd.DataFrame({"date": _to_dt64ns(pd.Series(pd.to_datetime(dates)))})
     pairs = d.merge(sec, how="cross")
     ok = (pairs["first_trade_date"].isna() | (pairs["first_trade_date"] <= pairs["date"])) & (
         pairs["last_trade_date"].isna() | (pairs["last_trade_date"] >= pairs["date"])
@@ -411,7 +419,7 @@ def prices_daily(
             {"start": start, "end": end, "ids": ids},
             dev=dev,
         )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     for col in columns:
         if col != "price_quality":
             df[col] = df[col].astype("float64")
@@ -437,7 +445,7 @@ def index_prices(
         {"symbol": symbol, "start": start, "end": end},
         dev=dev,
     )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     for col in ("close", "close_adj"):
         df[col] = df[col].astype("float64")
     return df
@@ -456,7 +464,7 @@ def treasury_rates(start: str | None = None, end: str | None = None, dev: bool =
         {"start": start, "end": end},
         dev=dev,
     )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     for col in ("month1", "month3", "year1", "year10"):
         df[col] = df[col].astype("float64")
     return df
