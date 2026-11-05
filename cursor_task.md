@@ -1,22 +1,23 @@
 # Cursor Task - FE-Factor-Model
-Date: 2026-11-04 21:20:09
+Date: 2026-11-04 21:35:39
 From: Claude (claude.ai)
 Repo: /home/rehan-ghias/FE-Factor-Model
 Branch: feat/panel-ms02-rebuild
 Priority: High
 
 ## Context
-The repo moved from tradinghost to MS-02 on Oct 26 2026. data/panel/* was rsynced over but was built from tradinghost's database. The stock database now lives on MS-02, and the panel must be rebuilt from it so everything downstream (classic factors, Fama-French validation, models) is sourced from the MS-02 DB. Design decisions are locked in docs/design-decisions-2026-10-20.md (top 1000 by mcap at >= $5 re-ranked monthly, 2006-01-31 to 2026-08-31, 26 features, holdout from 2024-01-31). Previous build: 248,000 rows, 248 months, 26 features, ~746s wall with n_jobs=-1.
+The MS-02 panel rebuild (see previous cursor_output) swapped 42 universe rows vs the tradinghost build. KNDI (security_id=10012, 2013-12 to 2016-03) and GP (security_id=9909, 2020-08 to 2021-12) now appear at mid-universe ranks in the top-1000-by-mcap universe. Both are small-caps, so this likely indicates a bad shares-outstanding figure (split/consolidation not applied, ADR ratio, units error) inflating market cap. A bad mcap contaminates size, value_bm, earnings_yield, sales_to_price, cashflow_to_price, and the universe itself.
 
 ## Task
-1. Confirm .env / config points at MS-02's local Postgres (not tradinghost's Tailscale address). Print the resolved host/db name (no password) in the output. If anything still points at tradinghost, fix it in config only, not .env.example secrets.
-2. Back up the current outputs: move data/panel/ to data/panel_tradinghost_backup/ (keep it untracked, same as data/panel).
-3. Run the existing pipeline (scripts/build_panel.py, plus the universe build if it's a separate step) unchanged against MS-02's DB. Maximize compute on MS-02: n_jobs=-1, and raise any worker/chunk/thread settings so all cores and available RAM are used; report core count and peak memory.
-4. Compare new vs backup: row count, month count, feature list, per-month universe size, and per-feature mean/std/null-rate. Flag any feature where null rate or mean differs by more than 1% and explain why if possible. Exact equality is expected if the DB is a faithful copy.
-5. Run the full test suite, including tests/test_panel_lookahead.py, against the new panel.
-6. Regenerate docs/panel-report.md from the new build.
+Read-only investigation first, then a minimal fix only if the data is clearly wrong.
 
-Do NOT: change feature definitions, the universe rule, the sample window, or the holdout date. Do NOT start building the classic factors, Fama-French validation, or any models. Do NOT delete the backup folder. Do NOT merge to main; leave the branch for Rehan to review.
+1. For security_id 10012 (KNDI) and 9909 (GP), pull monthly: close price, shares outstanding (every source the panel uses, including the vendor mcap fallback), computed mcap, vendor mcap, and universe rank. Cover the flagged months plus 12 months either side.
+2. Compare shares outstanding against SEC filings already in stockdb (10-K/10-Q/20-F/40-F cover-page or dei shares). Check for split/reverse-split events and whether prices and shares are adjusted consistently.
+3. Check whether the tradinghost backup panel (data/panel_tradinghost_backup/) had these names, and at what ranks. Identify which stockdb rows changed.
+4. Generalize: scan the whole panel for other names whose mcap jumps more than 5x or drops below 0.2x month-over-month without a matching price move of similar size, or whose shares_out disagrees with SEC filings by more than 3x. List the top offenders.
+5. Verdict per name: data error or real. If KNDI/GP are clearly data errors, implement the narrowest fix in the factor-model code (e.g. a shares-outstanding sanity filter against SEC-reported shares, or exclude rows failing the jump check) behind a config flag, rebuild the panel, and rerun tests and the compare script. Do NOT edit rows in stockdb itself; describe the DB-level fix needed for the stock-database repo instead.
+
+Do NOT: change feature definitions, the universe rule beyond the sanity filter, the sample window, or the holdout. Do NOT build classic factors, Fama-French validation, or models. Do NOT merge any branch to main. Do NOT delete the backup panel.
 
 ## Rules
 - Read existing files before editing; keep changes minimal and localized
@@ -33,7 +34,7 @@ Do NOT: change feature definitions, the universe rule, the sample window, or the
 - Before finishing: git add -A && git commit -m "<msg>" && git push -u origin feat/panel-ms02-rebuild
 
 ## Expected Output in cursor_output.md
-In cursor_output.md: resolved DB host, wall time per stage + total, cores/peak RAM used, row/month/feature counts, the new-vs-backup comparison table with any >1% diffs explained, test results, list of files changed, and a section titled "Not done / skipped" listing anything left out.
+cursor_output.md with: per-name tables (price, shares, mcap, vendor mcap, rank) for KNDI and GP; SEC comparison; verdict with evidence; the panel-wide offender list from step 4; if a fix was made, the config flag, rows affected, new universe/feature compare vs the pre-fix MS-02 panel, and test results; the recommended stock-database fix; and a "Not done / skipped" section.
 
 ## Status
 [ ] Not started
