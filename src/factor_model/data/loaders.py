@@ -17,6 +17,7 @@ from datetime import time
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 from factor_model.data.db import read_sql
 
@@ -481,6 +482,58 @@ def symbol_asof(keys: pd.DataFrame, history: pd.DataFrame | None = None, dev: bo
     return out.sort_values("_i")["symbol"].reset_index(drop=True)
 
 
+def _asof_last_n_one_sid(
+    gkeys: pd.DataFrame,
+    gf: pd.DataFrame,
+    value_cols: list[str],
+    n: int,
+    max_staleness_days: int | None,
+    max_gap_days: int,
+) -> pd.DataFrame | None:
+    """Per-security worker for ``asof_last_n_quarters`` (thread-safe on local arrays)."""
+    if gf is None or gf.empty:
+        return None
+    avail = (
+        pd.to_datetime(gf["date_available"], utc=True)
+        .dt.tz_localize(None)
+        .to_numpy(dtype="datetime64[ns]")
+    )
+    fpe = gf["fiscal_period_end"].to_numpy(dtype="datetime64[ns]")
+    vals = {c: gf[c].to_numpy() for c in value_cols}
+    rows = []
+    for ridx, cut in zip(gkeys["_row"].to_numpy(), gkeys["_cutoff"].to_numpy(), strict=True):
+        cut_ns = np.datetime64(pd.Timestamp(cut).tz_convert("UTC").tz_localize(None), "ns")
+        hi = int(np.searchsorted(avail, cut_ns, side="right"))
+        if hi == 0:
+            continue
+        end = hi - 1
+        if max_staleness_days is not None and avail[end] < cut_ns - np.timedelta64(
+            max_staleness_days, "D"
+        ):
+            continue
+        idxs = []
+        last_fpe = None
+        for j in range(end, -1, -1):
+            if last_fpe is not None and fpe[j] >= last_fpe:
+                continue
+            if last_fpe is not None and (last_fpe - fpe[j]) > np.timedelta64(max_gap_days, "D"):
+                break
+            if last_fpe is not None and (last_fpe - fpe[j]) < np.timedelta64(1, "D"):
+                continue
+            idxs.append(j)
+            last_fpe = fpe[j]
+            if len(idxs) == n:
+                break
+        rec: dict = {"_row": int(ridx), "ttm_ok": len(idxs) == n}
+        for k, j in enumerate(idxs):
+            for c in value_cols:
+                rec[f"q{k}_{c}"] = vals[c][j]
+            rec[f"q{k}_date_available"] = avail[j]
+            rec[f"q{k}_fiscal_period_end"] = fpe[j]
+        rows.append(rec)
+    return pd.DataFrame(rows) if rows else None
+
+
 def asof_last_n_quarters(
     keys: pd.DataFrame,
     fund: pd.DataFrame,
@@ -488,6 +541,7 @@ def asof_last_n_quarters(
     max_staleness_days: int | None = 548,
     cutoff: time = time(16, 0),
     max_gap_days: int = 120,
+    n_jobs: int = -1,
 ) -> pd.DataFrame:
     """Last ``n`` quarterly rows public by cutoff for each key, wide-formatted.
 
@@ -509,7 +563,6 @@ def asof_last_n_quarters(
             "zero_lag_reimputed",
         )
     ]
-    out_frames: list[pd.DataFrame] = []
     fund_sorted = fund.sort_values(["security_id", "date_available", "fiscal_period_end"])
     fund_sorted["date_available"] = pd.to_datetime(fund_sorted["date_available"], utc=True).astype(
         "datetime64[ns, UTC]"
@@ -518,52 +571,14 @@ def asof_last_n_quarters(
         "datetime64[ns]"
     )
     fund_by = {sid: g for sid, g in fund_sorted.groupby("security_id", sort=False)}
-    for sid, gkeys in left.groupby("security_id", sort=False):
-        gf = fund_by.get(sid)
-        if gf is None or gf.empty:
-            continue
-        avail = (
-            pd.to_datetime(gf["date_available"], utc=True)
-            .dt.tz_localize(None)
-            .to_numpy(dtype="datetime64[ns]")
+    groups = list(left.groupby("security_id", sort=False))
+    parts = Parallel(n_jobs=n_jobs, prefer="threads")(
+        delayed(_asof_last_n_one_sid)(
+            gkeys, fund_by.get(sid), value_cols, n, max_staleness_days, max_gap_days
         )
-        fpe = gf["fiscal_period_end"].to_numpy(dtype="datetime64[ns]")
-        vals = {c: gf[c].to_numpy() for c in value_cols}
-        rows = []
-        for ridx, cut in zip(gkeys["_row"].to_numpy(), gkeys["_cutoff"].to_numpy(), strict=True):
-            cut_ns = np.datetime64(pd.Timestamp(cut).tz_convert("UTC").tz_localize(None), "ns")
-            # rightmost index with date_available <= cut
-            hi = int(np.searchsorted(avail, cut_ns, side="right"))
-            if hi == 0:
-                continue
-            end = hi - 1
-            if max_staleness_days is not None and avail[end] < cut_ns - np.timedelta64(
-                max_staleness_days, "D"
-            ):
-                continue
-            # walk back by fiscal_period_end among rows with avail <= cut
-            idxs = []
-            last_fpe = None
-            for j in range(end, -1, -1):
-                if last_fpe is not None and fpe[j] >= last_fpe:
-                    continue  # same or later period (duplicate avail)
-                if last_fpe is not None and (last_fpe - fpe[j]) > np.timedelta64(max_gap_days, "D"):
-                    break
-                if last_fpe is not None and (last_fpe - fpe[j]) < np.timedelta64(1, "D"):
-                    continue
-                idxs.append(j)
-                last_fpe = fpe[j]
-                if len(idxs) == n:
-                    break
-            rec: dict = {"_row": int(ridx), "ttm_ok": len(idxs) == n}
-            for k, j in enumerate(idxs):
-                for c in value_cols:
-                    rec[f"q{k}_{c}"] = vals[c][j]
-                rec[f"q{k}_date_available"] = avail[j]
-                rec[f"q{k}_fiscal_period_end"] = fpe[j]
-            rows.append(rec)
-        if rows:
-            out_frames.append(pd.DataFrame(rows))
+        for sid, gkeys in groups
+    )
+    out_frames = [p for p in parts if p is not None and len(p)]
     if not out_frames:
         empty = left[["_row"]].copy()
         empty["ttm_ok"] = False

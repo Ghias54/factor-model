@@ -246,7 +246,11 @@ def compute_targets_and_features(
 
     t1 = time.perf_counter()
     ttm = loaders.asof_last_n_quarters(
-        keys[["security_id", "date"]], fund, n=5, max_staleness_days=stale
+        keys[["security_id", "date"]],
+        fund,
+        n=5,
+        max_staleness_days=stale,
+        n_jobs=n_jobs,
     )
     keys = keys.merge(ttm, on=["security_id", "date"], how="left")
     walls["ttm_asof_s"] = round(time.perf_counter() - t1, 2)
@@ -328,8 +332,9 @@ def compute_targets_and_features(
     month_meta["_start_1m"] = month_meta["date"] - pd.DateOffset(months=1)
     meta_by = {sid: g for sid, g in month_meta.groupby("security_id", sort=False)}
 
-    # Chunk daily loads — full history for all universe names does not fit in 11 GB RAM.
-    chunk = 150
+    # Chunk daily loads — sized via config for available RAM (MS-02 ~30 GB).
+    chunk = int(cfg.get("compute", {}).get("daily_price_chunk", 800))
+    n_inner = int(cfg.get("compute", {}).get("daily_feature_n_jobs", n_jobs))
     daily_parts: list[pd.DataFrame] = []
     load_s = 0.0
     for i in range(0, len(sids), chunk):
@@ -351,8 +356,7 @@ def compute_targets_and_features(
                 sid, meta_by.get(sid, pd.DataFrame()), _db.get(sid, pd.DataFrame())
             )
 
-        # Threads within a small chunk; processes would copy the batch.
-        n_inner = min(8, max(1, len(batch)))
+        # Threads within a chunk; processes would copy the batch.
         parts = Parallel(n_jobs=n_inner, prefer="threads")(delayed(_one)(sid) for sid in batch)
         daily_parts.extend(p for p in parts if p is not None and len(p))
         del daily, daily_by, parts
@@ -410,6 +414,8 @@ def compute_targets_and_features(
         "walls": walls,
         "wall_s": round(time.perf_counter() - t0, 2),
         "n_jobs": n_jobs,
+        "daily_price_chunk": int(cfg.get("compute", {}).get("daily_price_chunk", 800)),
+        "daily_feature_n_jobs": int(cfg.get("compute", {}).get("daily_feature_n_jobs", n_jobs)),
     }
     return raw, meta
 

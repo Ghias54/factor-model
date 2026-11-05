@@ -143,3 +143,7 @@ evaluation:
 compute:
   n_jobs: -1
   random_seed: 42
+  # Daily-price feature stage (vol/Amihud/max-ret). Tuned for MS-02 (~30 GB / 24 cores);
+  # tradinghost used chunk=150 and an 8-thread cap under ~11 GB RAM.
+  daily_price_chunk: 800
+  daily_feature_n_jobs: -1
