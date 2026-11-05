@@ -117,6 +117,11 @@ def build_universe(
         enabled=sanity_on,
         max_ratio=max_ratio,
     )
+    # Restate WAS onto the same share basis as ``close`` via vendor-implied shares.
+    implied = elig["mcap_vendor"] / elig["close"].where(elig["close"] > 0)
+    fix_shares = elig["mcap_sanity_replaced"] & implied.notna() & (implied > 0)
+    elig.loc[fix_shares, "weighted_average_shares_diluted"] = implied[fix_shares]
+    elig.loc[fix_shares, "weighted_average_shares"] = implied[fix_shares]
     elig["mcap_from_vendor"] = (
         (elig["mcap_computed"].isna() & elig["mcap_vendor"].notna())
         | elig["mcap_sanity_replaced"]

@@ -34,3 +34,11 @@ def test_sanity_catches_deflated_computed():
     mcap, replaced = apply_mcap_vendor_sanity(computed, vendor, enabled=True, max_ratio=3.0)
     assert bool(replaced.iloc[0]) is True
     assert float(mcap.iloc[0]) == 1e9
+
+
+def test_implied_shares_from_vendor_mcap():
+    close = pd.Series([10.0, 20.0])
+    vendor = pd.Series([1e9, 2e9])
+    implied = vendor / close
+    assert float(implied.iloc[0]) == 1e8
+    assert float(implied.iloc[1]) == 1e8
