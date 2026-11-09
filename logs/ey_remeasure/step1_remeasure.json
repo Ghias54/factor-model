@@ -1,0 +1,65 @@
+{
+  "n_panel": 248000,
+  "audit_exposed_n": 48343,
+  "audit_exposed_share": 0.19493145161290323,
+  "audit_2011_04_share": 0.1948467741935484,
+  "any_ttm_backfill_n": 1297,
+  "any_ttm_backfill_share": 0.005229838709677419,
+  "actually_mixed_disagree20_n": 5028,
+  "actually_mixed_disagree20_share": 0.020274193548387096,
+  "actually_mixed_v2_n": 2697,
+  "actually_mixed_v2_share": 0.010875,
+  "among_audit_exposed": {
+    "n": 48343,
+    "with_backfill": 1194,
+    "same_basis_evidence": 45168,
+    "disagree20": 5028,
+    "ey_ratio_median": 0.9994262029784065,
+    "ey_ratio_p10": 0.9325554534545455,
+    "ey_ratio_p90": 1.0754044735642831
+  },
+  "among_non_exposed": {
+    "ey_ratio_median": 0.9973153684288589
+  },
+  "wall_s": 28.18,
+  "spot": {
+    "AAPL": {
+      "n": 248,
+      "audit_exposed": 177,
+      "any_backfill": 0,
+      "actually_mixed_v2": 6,
+      "ey_ratio_med": 0.9904684123259815,
+      "median_split_factor_q0": null
+    },
+    "NVDA": {
+      "n": 248,
+      "audit_exposed": 223,
+      "any_backfill": 0,
+      "actually_mixed_v2": 0,
+      "ey_ratio_med": 1.0023270859805167,
+      "median_split_factor_q0": null
+    },
+    "TSLA": {
+      "n": 195,
+      "audit_exposed": 148,
+      "any_backfill": 0,
+      "actually_mixed_v2": 5,
+      "ey_ratio_med": 1.0118066026505832,
+      "median_split_factor_q0": null
+    },
+    "GOOGL": {
+      "n": 248,
+      "audit_exposed": 201,
+      "any_backfill": 0,
+      "actually_mixed_v2": 7,
+      "ey_ratio_med": 1.0015414684195485,
+      "median_split_factor_q0": null
+    },
+    "KNDI": {
+      "n": 0
+    },
+    "GP": {
+      "n": 0
+    }
+  }
+}

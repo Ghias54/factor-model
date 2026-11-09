@@ -1,0 +1,10 @@
+/home/rehan-ghias/FE-Factor-Model/src/factor_model/features/compute.py:155: RuntimeWarning: Mean of empty slice
+  y_dm = ymat - np.nanmean(ymat, axis=0)
+/home/rehan-ghias/FE-Factor-Model/src/factor_model/features/compute.py:155: RuntimeWarning: invalid value encountered in subtract
+  y_dm = ymat - np.nanmean(ymat, axis=0)
+/home/rehan-ghias/FE-Factor-Model/.venv/lib/python3.14/site-packages/numpy/_core/fromnumeric.py:83: RuntimeWarning: invalid value encountered in reduce
+  return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
+universe {'n_months': 248, 'n_rows': 248000, 'n_securities': 2651, 'months_below_top_n': {}, 'n_vendor_mcap_fallback': 17113, 'pct_vendor_mcap_fallback': 0.06900403225806452, 'n_mcap_sanity_replaced': 3009, 'mcap_vendor_sanity': {'enabled': True, 'max_ratio': 3.0}, 'wall_s': 32.84, 'start': '2006-01-31', 'end': '2026-08-31', 'top_n': 1000, 'min_price': 5.0}
+features {'n_rows': 248000, 'n_months': 248, 'feature_names': ['value_bm', 'size_ln_mcap', 'momentum_12_1', 'quality_roe', 'earnings_yield', 'sales_to_price', 'cashflow_to_price', 'reversal_1m', 'momentum_6m', 'reversal_36_13', 'volatility_12m', 'beta_60m', 'max_daily_ret_1m', 'turnover', 'dollar_volume_ln', 'amihud', 'gross_margin', 'roa', 'gross_profit_to_assets', 'delta_roe_4q', 'revenue_growth_yoy', 'asset_growth_yoy', 'accruals', 'debt_to_assets', 'current_ratio', 'sue'], 'walls': {'prices_month_end_s': 12.37, 'fundamentals_s': 15.67, 'earnings_s': 4.45, 'macro_index_s': 2.81, 'price_features_s': 0.31, 'ttm_asof_s': 117.95, 'sue_s': 0.08, 'daily_prices_load_s': 78.46, 'daily_features_s': 109.84, 'beta_s': 0.43}, 'wall_s': 264.03, 'n_jobs': -1, 'daily_price_chunk': 800, 'daily_feature_n_jobs': -1}
+done wall=298.3s peak_rss=7201MB wrote /home/rehan-ghias/FE-Factor-Model/data/panel and /home/rehan-ghias/FE-Factor-Model/docs/panel-report.md
+WALL=304.21 PEAK_RSS_KB=7374196

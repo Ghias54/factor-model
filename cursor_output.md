@@ -1,100 +1,141 @@
-# Cursor output — chore/lock-decisions
+# Cursor Output — earnings_yield formula + post-backfill panel rebuild
 
-Date: 2026-10-20 · Branch: `chore/lock-decisions` (from updated `main` @ `38d4811`) · Pushed, not merged.
+Date: 2026-11-08  
+Branch: `feat/panel-ms02-rebuild`  
+Baseline backup: `data/panel_ms02_pre_ey_fix/` (pre-backfill panel, old EY formula)
 
-## 1. Discarded working-tree diffs (FE-Factor-Model)
+## Summary
 
-Recorded before `git restore` on 2026-10-20. These were superseded by
-`docs/design-decisions-2026-10-20.md` and contained the incorrect survivorship claim
-(later softened in the working tree, but still discarded as directed).
+Switched `earnings_yield` from TTM diluted EPS / month-end close to TTM net income / mcap (same dollar basis as sales_to_price and cashflow_to_price), added a 2:1 split-invariance unit test, and rebuilt the panel on post–split-restatement prod. Full suite: **21 passed** before and after. Panel still **248 months × 1,000 names = 248,000 rows**. Backfill moved liquidity/size features on ~143 securities (turnover, dollar volume, Amihud, mcap-linked yields); the formula change re-ranks ~10% of EY rows by at least one decile while Spearman vs old EY stays ~0.98. Vendor sanity replacements: **2,977 → 3,009**. Peak RSS ~7.2 GB; rebuild wall ~304 s.
 
-### `configs/default.yaml` (discarded)
+## Step 0 — Backup and tests
 
-```diff
--  min_market_cap_pctile: 0.0 # TBD — e.g. 0.2 drops the smallest 20% each month
--  top_n_by_market_cap: null  # TBD — e.g. 1000 for a Russell-1000-style universe
-+  min_market_cap_pctile: 0.0
-+  top_n_by_market_cap: 1000  # DECIDED 2026-10-06 — re-ranked every month from all qualifying stocks
-+  robustness_top_n: 500      # secondary check, S&P-500-like
+- Copied `data/panel/` → `data/panel_ms02_pre_ey_fix/`.
+- Pre-change suite: **20 passed** in 1.4 s (then +1 new test → 21).
+
+## Step 1 — Old earnings_yield mixed-basis exposure (today’s DB, before code change)
+
+Audit-style “any split after latest fiscal period end” still flags **48,343 / 248,000 = 19.49%** of panel rows (vs audit 19.48%). That count is almost unchanged because it only looks at corporate_action dates, not whether EPS was already on the price basis.
+
+On post-backfill fundamentals for the same panel keys:
+
+| Measure | Rows | Share |
+|---|---:|---:|
+| Audit-exposed (post-FPE split) | 48,343 | 19.5% |
+| Any TTM quarter with stockdb `split_factor` set | 1,297 | 0.52% |
+| Actually mixed (exposed and EY_pershare vs EY_dollar disagree >20%) | 5,028 | 2.0% |
+| Actually mixed v2 (exposed, no same-basis evidence) | 2,697 | 1.1% |
+
+Among audit-exposed rows, median `(TTM EPS / close) / (TTM NI / mcap)` ≈ **1.00** (p10/p90 ≈ 0.93 / 1.08). Spot checks: AAPL/NVDA/TSLA/GOOGL are heavily audit-exposed but have **no** `split_factor` rows and EY ratio ≈ 1 — vendor already restated ordinary forward-split EPS onto today’s share basis. Stockdb’s backfill only touched the `needs_adjust` set (~227 securities with non-null `split_factor` in FQ; ~86 of those appear in stockdb’s panel-cell summary).
+
+**Why 19.5% ≠ true mixed:** the 11/04 audit treated every post-filing split as proof that EPS and close were on different bases. Ordinary forward splits (NVDA, AAPL, TSLA, GOOGL, …) were already vendor-aligned, so most of that 19.5% was never mixed. True residual mixed basis after the backfill is about **1–2%**. The formula change to NI/mcap still stands (split-proof by construction).
+
+Artifacts: `logs/ey_remeasure/step1_remeasure.json`.
+
+## Step 2 — Feature change
+
+In `src/factor_model/features/compute.py`:
+
+```text
+earnings_yield = TTM net_income (q0..q3, same asof/staleness as before) / mcap
 ```
 
-### `docs/decisions.md` (discarded)
+Null if fewer than four quarters or mcap missing/≤0; negatives kept. Name unchanged. Docs/config one-liners updated (`configs/default.yaml`, `docs/decisions.md`, `docs/design-decisions-2026-10-20.md`).
 
-```diff
-+| 2026-10-06 | Universe = top 1000 US common stocks by market cap, re-ranked monthly (top 500 as robustness check) | Russell-1000-like; avoids micro-cap noise; larger cross-section for ML than S&P 500; least exposed of the candidate universes to the vendor's missing pre-2016 delistings (see docs/data-audit.md). Re-ranking at t is survivorship-free only where dead names exist in the database — roughly from 2021; earlier years are partly survivorship-biased. Today's S&P 500 list rejected (fully survivorship-biased) |
-```
+## Step 3 — Tests
 
-### Other uncommitted items at task start (not discarded)
+- Added `tests/test_earnings_yield_split.py`: same NI, price halves, shares double, mcap unchanged → EY unchanged; old EPS/close doubles under unrestated EPS.
+- Full suite: **21 passed**.
 
-- `M cursor_task.md` — new task file for this run (kept / committed on the chore branch).
-- `?? docs/design-decisions-2026-10-20.md` — locked decisions source (kept / committed).
+## Step 4 — Rebuild and old vs new comparison
 
-No other dirty files. Did not stop; these two are required inputs for this task.
+Rebuild: wall **304.2 s**, peak RSS **~7.2 GB**, n_jobs=-1. Confirmed **248 months, 248,000 rows, every month 1,000 names**.
 
-## 2. Merges into main (Approved by Rehan 2026-10-20)
+Universe membership (vs backup): **135 dropped, 135 added** across 119 months (≤2 slots/month). Sanity replacements **2,977 → 3,009**; vendor mcap fallback rows **17,088 → 17,113**.
 
-### FE-Factor-Model
+### Backfill effect (every feature except earnings_yield)
 
-| | |
+Inner join 247,865 rows. Changes concentrated in volume/shares/mcap paths; price-only features unchanged.
+
+| Feature | Rows changed | Corr | Share ≥1 decile move |
+|---|---:|---:|---:|
+| amihud | 5,966 | 1.000 | 3.8% |
+| dollar_volume_ln | 5,914 | 0.999 | 3.8% |
+| turnover | 5,820 | 0.972 | 4.2% |
+| size_ln_mcap | 1,353 | 1.000 | 0.6% |
+| cashflow_to_price | 1,315 | 0.999 | 0.8% |
+| value_bm | 1,313 | 1.000 | 0.7% |
+| sales_to_price | 1,234 | 1.000 | 0.7% |
+| sue | 234 | 1.000 | ~0% |
+| (other fund features) | ≤160 | ~1.0 | ≤0.2% |
+| momentum / reversal / vol / beta / max_daily_ret | 0 | 1.0 | 0 |
+
+**143 securities** with any non-EY change. Top 10 by rows changed: SCCO (248), WRB (223), CNQ (222), IBKR (215), BN (204), RJF (189), RTX (174), TT (170), FAST (161), PANW (150).
+
+### Formula effect (earnings_yield old vs new)
+
+| Metric | Value |
 |---|---|
-| Merge commit | `38d4811` Merge docs/data-audit into main. Approved by Rehan 2026-10-20. |
-| Strategy | `--no-ff`, ort; **no conflicts** |
-| Pushed | `origin/main` `601502c..38d4811` |
-| Confirmed on main | `src/factor_model/data/db.py`, `loaders.py`, `audit.py`, `__init__.py` |
-| Tests | `pytest`: **9 passed** (after merge, before chore branch) |
+| Rows changed | 220,446 (89%) |
+| Non-null coverage | 220,457 → 220,526 |
+| Pearson (levels) | ~0 (outlier-driven; not useful) |
+| Spearman | **0.978** |
+| Share moving ≥1 cross-sectional decile | **10.2%** |
 
-### stock-database
+Spearman by year stays 0.97–0.99 throughout; decile-move share by year ~8–13%.
 
-| | |
-|---|---|
-| Merge commit | `35559e8` Merge load/gap-pull-1016 into main. Approved by Rehan 2026-10-20. |
-| Strategy | `--no-ff`, ort; **no conflicts** |
-| Pushed | `origin/main` `c1d83a0..35559e8` |
-| Brought in | `src/load/gap_pull.py`, `scripts/load_gap_pull.py`, `scripts/load_sec_q3_statements.py`, migration `049_ownership_incomplete.sql`, instrument_guard fix, cursor_output |
-| Tests | `pytest`: **486 passed, 3 skipped** in 46.9s |
-| Not done | No loads, crawls, repairs, or migrations run; database untouched |
+Artifacts: `logs/ey_remeasure/step4_compare.json`, `logs/ey_remeasure/rebuild.log`.
 
-## 3. Branch `chore/lock-decisions` commits
+## Step 5 — Open items from 11/04 audit
 
-```
-fc48c82 Add cursor_task for chore/lock-decisions
-2264d90 Assert locked config keys in test_config
-9ef23df Lock decisions log and plan to 2026-10-20 design decisions
-8e15d2c Lock configs/default.yaml to 2026-10-20 design decisions
-(+ final commit for this cursor_output.md)
-```
+### sue — verdict: fine as is
 
-Tests on branch: `pytest` **12 passed**.
+Sampled NVDA/AAPL/TSLA/GOOGL (ordinary forward splits), KNDI/GP (`needs_adjust`, not in top-1000 panel), plus 10 random `needs_adjust` names. For named forward splits, `earnings_event` EPS across the ex-date is closer to a restated history (levels do not drop by ~1/split ratio) than to an unrestated series. On panel months with SUE, `(eps_actual − eps_estimated) / close` matches the dollar form `(surprise × WAS) / mcap` with median ratio **1.0** and **100%** within 20% for NVDA/AAPL/TSLA/GOOGL/WCN/VIAV/DINO. No code change proposed.
 
-## 4. Config keys changed (`configs/default.yaml`)
+### turnover — verdict: fine as is (monitor needs_adjust)
 
-| Area | Change |
-|---|---|
-| `sample` | start → 2006-01-31; end kept 2026-08-31; holdout kept 2024-01-31; **added** `first_oos: 2011-01-31` |
-| `universe` | `top_n_by_market_cap: 1000`; `price_field: close_raw`; `market_cap: close_x_shares_diluted`; membership / delisting_return notes; **removed** any `robustness_top_n` |
-| `target` | `type: rank`; `risk_free: month3`; `return_field: close_adj` |
-| `features` | **new** block: 26 named features, staleness 548, earnings ≤120 days, 16:00 ET cutoff |
-| `preprocessing` | rank to [-1,1]; `missing_to: 0`; `missing_indicator: false`; winsorize null |
-| `walk_forward` | `retrain: january`; `validation_years: 3` |
-| `models` | **new** list of 7 models with placeholder tune grids |
-| `portfolio` | `long_only: true`; top decile; equal weight; benchmark EW universe; cost 10 bps/side |
-| `evaluation` | **new** regimes (covid, ratehike, survivorship_biased/clean) + metrics |
+`volume / WAS_diluted` vs `volume / (vendor mcap / close)`:
 
-## 5. Docs
+| Universe | Median ratio | Within ±20% |
+|---|---:|---:|
+| Old (all) | 0.991 | 95.5% |
+| New (all) | 0.991 | 95.4% |
+| Old needs_adjust only | 0.992 | 84.5% |
+| New needs_adjust only | 0.990 | 79.9% |
 
-- `docs/decisions.md` rewritten as a date/decision/reason/source table covering every section of the 2026-10-20 design doc. Explicit: universe is **NOT survivorship-free before ~2021**.
-- `docs/plan.md` rebuild order matches "Build order after cleanup" (§1 panel → §2 classic+FF → §3 models → §4 portfolios/regimes → §5 holdout once).
-- `docs/design-decisions-2026-10-20.md` committed as the source-of-truth review note.
+Overall alignment is unchanged and strong. The `needs_adjust` subset still has a fatter mismatch tail after the backfill (within-20% slipped ~5 pp). **Propose (do not implement):** optional turnover fallback to vendor-implied shares when `|WAS / (vendor_mcap/close) − 1|` exceeds a config threshold (mirrors the mcap sanity path). Not blocking.
 
-## 6. Conflicts
+### Vendor mcap gate (max_ratio 3.0) — still looks right
 
-None on either merge.
+Computed/vendor histogram on universe `mcap_computed` (same bins as `logs/split_audit/step3`):
 
-## 7. NOT done / skipped
+| Band | Old (11/04 panel) | New (post-backfill) |
+|---|---:|---:|
+| within [1/1.2, 1.2] | 94.2% | 94.0% |
+| median ratio | 1.009 | 1.009 |
+| outside 3× (= sanity fires) | 2,977 | 3,009 |
+| 1.5–3 plus 1/3–1/1.5 | 4,923 | 5,331 |
 
-- Did **not** build universe, panel, features, or models.
-- Did **not** merge `chore/lock-decisions` into main (human merges).
-- Did **not** run any stock-database loads, crawls, repairs, or migrations.
-- Did **not** change production or dev databases.
-- Did **not** apply the stock-database zero-lag fundamentals repair (loaders still guard).
-- Did **not** refetch pre-2005 prices for the 602 truncated names (explicitly skipped per decisions).
+Extremes (`>10`, `<0.1`) barely moved. Backfill did not clear the dual-class / preferred / vendor-noise tail the prior audit called out. **Keep max_ratio at 3.0.**
+
+Artifacts: `logs/ey_remeasure/step5_checks.json`.
+
+## Commits
+
+1. `f5fe912` — Switch earnings_yield to TTM net income / mcap (split-proof).
+2. *(this push)* — Panel rebuild report + Step 4/5 measurement logs + `cursor_output.md`.
+
+## Not done / skipped
+
+- Did not implement turnover vendor-implied fallback (proposal only).
+- Did not change `max_ratio` (decision locked at 3.0).
+- Did not merge to `main`.
+- KNDI/GP not in the top-1000 panel in either build (0 months); SUE/turnover panel checks for those two are N/A (fund `split_factor` rows present).
+- No model training, no holdout evaluation.
+
+## Surprises / judgment calls
+
+- Audit 19.5% was a large overstatement of true mixed-basis EY once vendor-adjusted forward splits are recognized; used both dollar-vs-pershare disagreement and statement/mcap alignment as the “actually mixed” gauges (~1–2%).
+- EY Pearson ≈ 0 overall despite Spearman 0.98 — a few extreme level outliers; reported Spearman and decile moves as the ranking-relevant stats.
+- Post-backfill, `needs_adjust` turnover vs vendor-implied got slightly worse, not better — worth a stockdb follow-up, not a panel blocker.
+- Sanity replacement count rose slightly after backfill (2,977 → 3,009); outside-3× mass was not eliminated.

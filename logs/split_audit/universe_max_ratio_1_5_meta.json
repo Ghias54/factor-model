@@ -1,0 +1,18 @@
+{
+  "n_months": 248,
+  "n_rows": 248000,
+  "n_securities": 2662,
+  "months_below_top_n": {},
+  "n_vendor_mcap_fallback": 22169,
+  "pct_vendor_mcap_fallback": 0.08939112903225807,
+  "n_mcap_sanity_replaced": 8064,
+  "mcap_vendor_sanity": {
+    "enabled": true,
+    "max_ratio": 1.5
+  },
+  "wall_s": 10.45,
+  "start": "2006-01-31",
+  "end": "2026-08-31",
+  "top_n": 1000,
+  "min_price": 5.0
+}

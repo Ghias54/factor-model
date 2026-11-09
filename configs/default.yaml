@@ -16,6 +16,12 @@ universe:
   market_cap: close_x_shares_diluted  # close × weighted_average_shares_diluted; never close_adj × shares
   membership: non_suspect_price_at_t
   delisting_return: partial_month_to_last_price
+  # When close is restated for a reverse split but WAS shares are not, computed
+  # mcap is inflated vs vendor market_cap_daily. Prefer vendor when the ratio
+  # is outside [1/max_ratio, max_ratio]. DB-level fix: restate historical WAS.
+  mcap_vendor_sanity:
+    enabled: true
+    max_ratio: 3.0
 
 target:
   type: rank                   # cross-sectional rank of next-month return, scaled to [-1, 1]
@@ -34,7 +40,7 @@ features:
     - momentum_12_1            # return t-12 → t-1 (skip most recent month)
     - quality_roe              # TTM net income / latest total_equity; missing if equity ≤ 0
     # Valuation
-    - earnings_yield           # TTM EPS / price
+    - earnings_yield           # TTM net income / mcap (split-proof; was TTM EPS / close)
     - sales_to_price           # TTM revenue / mcap
     - cashflow_to_price        # TTM CFO / mcap
     # Price / risk
@@ -143,3 +149,7 @@ evaluation:
 compute:
   n_jobs: -1
   random_seed: 42
+  # Daily-price feature stage (vol/Amihud/max-ret). Tuned for MS-02 (~30 GB / 24 cores);
+  # tradinghost used chunk=150 and an 8-thread cap under ~11 GB RAM.
+  daily_price_chunk: 800
+  daily_feature_n_jobs: -1

@@ -1,0 +1,69 @@
+{
+  "features": [
+    {
+      "feature": "earnings_yield",
+      "formula": "sum(q0..q3 eps_diluted) / close",
+      "numerator": "TTM diluted EPS from fundamental_quarterly (not split-restated)",
+      "denominator": "close (split-adjusted to today)",
+      "same_basis": false,
+      "per_share": true
+    },
+    {
+      "feature": "sue",
+      "formula": "(eps_actual - eps_estimated) / close",
+      "numerator": "earnings_event surprise (vendor may rewrite; not guaranteed PIT)",
+      "denominator": "close (split-adjusted to today)",
+      "same_basis": "uncertain",
+      "per_share": true
+    },
+    {
+      "feature": "turnover",
+      "formula": "volume / WAS_diluted",
+      "numerator": "volume (split-adjusted)",
+      "denominator": "WAS from asof fundamentals (not restated) unless mcap_vendor_sanity fired",
+      "same_basis": false,
+      "per_share": false,
+      "shares_based": true
+    },
+    {
+      "feature": "value_bm",
+      "formula": "total_equity / mcap",
+      "numerator": "book equity ($)",
+      "denominator": "mcap = close\u00d7WAS or vendor after sanity",
+      "same_basis": "if_mcap_ok",
+      "per_share": false
+    },
+    {
+      "feature": "size_ln_mcap",
+      "formula": "log(mcap)",
+      "numerator": "mcap",
+      "denominator": "\u2014",
+      "same_basis": "if_mcap_ok",
+      "per_share": false
+    },
+    {
+      "feature": "sales_to_price",
+      "formula": "TTM revenue / mcap",
+      "numerator": "revenue ($)",
+      "denominator": "mcap",
+      "same_basis": "if_mcap_ok",
+      "per_share": false
+    },
+    {
+      "feature": "cashflow_to_price",
+      "formula": "TTM CFO / mcap",
+      "numerator": "CFO ($)",
+      "denominator": "mcap",
+      "same_basis": "if_mcap_ok",
+      "per_share": false
+    },
+    {
+      "feature": "dollar_volume_ln",
+      "formula": "log(close \u00d7 volume)",
+      "numerator": "close and volume (both split-adj)",
+      "denominator": "\u2014",
+      "same_basis": true,
+      "per_share": false
+    }
+  ]
+}

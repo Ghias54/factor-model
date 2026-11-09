@@ -36,7 +36,7 @@ Classic four:
 | Quality | ROE = TTM net income / latest total_equity; missing if equity ≤ 0 |
 
 Extras (22):
-- Valuation: earnings yield (TTM EPS / price), sales-to-price, cash-flow-to-price (TTM CFO / mcap)
+- Valuation: earnings yield (TTM net income / mcap; split-proof, same basis as sales/CF yields — was TTM EPS / price), sales-to-price, cash-flow-to-price (TTM CFO / mcap)
 - Price/risk: 1-month reversal, 6-month momentum, 36-month long-term reversal (t-36 → t-13), 12-month volatility, 60-month beta vs ^GSPC (monthly), max daily return last month
 - Liquidity: turnover (volume / weighted_average_shares), dollar volume (log), Amihud illiquidity
 - Profitability: gross margin, ROA, gross profit / assets, 4-quarter change in ROE

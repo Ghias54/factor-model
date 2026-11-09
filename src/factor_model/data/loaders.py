@@ -15,11 +15,21 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import time
 
+import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 from factor_model.data.db import read_sql
 
 NY_TZ = "America/New_York"
+
+
+def _to_dt64ns(s: pd.Series, *, utc: bool = False) -> pd.Series:
+    """Normalize DB/pandas datetimes to datetime64[ns] (Postgres 18 may yield [s])."""
+    out = pd.to_datetime(s, utc=True) if utc else pd.to_datetime(s)
+    if utc:
+        return out.astype("datetime64[ns, UTC]")
+    return out.astype("datetime64[ns]")
 
 FUNDAMENTAL_COLUMNS = (
     "revenue",
@@ -94,7 +104,7 @@ def month_ends(
         {"start": start, "end": end},
         dev=dev,
     )
-    dates = pd.to_datetime(df["date"])
+    dates = _to_dt64ns(df["date"])
     if complete_only:
         last_bday = dates + pd.offsets.BMonthEnd(0)
         partial = df["is_last_loaded"] & ((last_bday - dates).dt.days > 3)
@@ -123,7 +133,7 @@ def securities(dev: bool = False) -> pd.DataFrame:
         dev=dev,
     )
     for col in ("first_trade_date", "last_trade_date"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     return df
 
 
@@ -131,7 +141,7 @@ def symbol_history(dev: bool = False) -> pd.DataFrame:
     """Ticker ranges, half-open ``[valid_from, valid_to)``."""
     df = read_sql("SELECT security_id, symbol, valid_from, valid_to FROM symbol_history", dev=dev)
     for col in ("valid_from", "valid_to"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     return df
 
 
@@ -147,7 +157,7 @@ def prices_on_dates(dates: Sequence, dev: bool = False) -> pd.DataFrame:
         {"dates": dates},
         dev=dev,
     )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     for col in ("close", "close_raw", "close_adj", "volume"):
         df[col] = df[col].astype("float64")
     return df
@@ -173,7 +183,7 @@ def price_span(dev: bool = False) -> pd.DataFrame:
         dev=dev,
     )
     for col in ("first_price_date", "last_price_date"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     for col in ("last_close", "last_close_raw", "last_close_adj", "last_volume"):
         df[col] = df[col].astype("float64")
     return df
@@ -233,8 +243,8 @@ def fundamentals(
         """,
         dev=dev,
     )
-    df["fiscal_period_end"] = pd.to_datetime(df["fiscal_period_end"])
-    df["date_available"] = pd.to_datetime(df["date_available"], utc=True)
+    df["fiscal_period_end"] = _to_dt64ns(df["fiscal_period_end"])
+    df["date_available"] = _to_dt64ns(df["date_available"], utc=True)
     for col in columns:
         df[col] = df[col].astype("float64")
     return guard_zero_lag(df) if guard else df
@@ -261,11 +271,19 @@ def asof_fundamentals(
     Rows older than ``max_staleness_days`` (by availability) are dropped.
     """
     left = keys[["security_id", "date"]].copy()
-    left["_cutoff"] = asof_cutoff(left["date"], cutoff)
-    left = left.sort_values("_cutoff")
-    right = fund.sort_values(["date_available", "fiscal_period_end"]).drop_duplicates(
-        ["security_id", "date_available"], keep="last"
+    left["security_id"] = left["security_id"].astype("int64")
+    left["date"] = pd.to_datetime(left["date"]).astype("datetime64[ns]")
+    left["_cutoff"] = asof_cutoff(left["date"], cutoff).astype("datetime64[ns, UTC]")
+    # merge_asof requires the on-key to be globally sorted (by-groups stay ordered).
+    left = left.sort_values("_cutoff", kind="mergesort")
+    right = fund.copy()
+    right["security_id"] = right["security_id"].astype("int64")
+    right["date_available"] = pd.to_datetime(right["date_available"], utc=True).astype(
+        "datetime64[ns, UTC]"
     )
+    right = right.sort_values(
+        ["date_available", "fiscal_period_end"], kind="mergesort"
+    ).drop_duplicates(["security_id", "date_available"], keep="last")
     out = pd.merge_asof(
         left,
         right,
@@ -298,7 +316,7 @@ def earnings_events(dev: bool = False) -> pd.DataFrame:
         dev=dev,
     )
     for col in ("report_date", "last_updated"):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = _to_dt64ns(df[col])
     for col in ("eps_actual", "eps_estimated", "revenue_actual", "revenue_estimated"):
         df[col] = df[col].astype("float64")
     return df
@@ -337,7 +355,7 @@ def analyst_estimates(dev: bool = False) -> pd.DataFrame:
         """,
         dev=dev,
     )
-    df["target_period"] = pd.to_datetime(df["target_period"])
+    df["target_period"] = _to_dt64ns(df["target_period"])
     return df
 
 
@@ -353,7 +371,7 @@ def vendor_market_cap_on_dates(dates: Sequence, dev: bool = False) -> pd.DataFra
         {"dates": dates},
         dev=dev,
     )
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = _to_dt64ns(df["date"])
     df["market_cap"] = df["market_cap"].astype("float64")
     return df
 
@@ -364,9 +382,216 @@ def listed_on(sec: pd.DataFrame, dates: pd.Series) -> pd.DataFrame:
     Uses only listing dates, never today's status, so delisted names stay in.
     """
     sec = sec[["security_id", "first_trade_date", "last_trade_date"]]
-    d = pd.DataFrame({"date": pd.to_datetime(dates)})
+    d = pd.DataFrame({"date": _to_dt64ns(pd.Series(dates))})
     pairs = d.merge(sec, how="cross")
     ok = (pairs["first_trade_date"].isna() | (pairs["first_trade_date"] <= pairs["date"])) & (
         pairs["last_trade_date"].isna() | (pairs["last_trade_date"] >= pairs["date"])
     )
     return pairs.loc[ok, ["date", "security_id"]].reset_index(drop=True)
+
+
+def prices_daily(
+    start: str,
+    end: str,
+    security_ids: Sequence[int] | None = None,
+    columns: Sequence[str] = ("close", "close_raw", "close_adj", "volume", "price_quality"),
+    dev: bool = False,
+) -> pd.DataFrame:
+    """Daily bars in ``[start, end]``. Optionally restrict to ``security_ids``."""
+    cols = ", ".join(["security_id", "date", *columns])
+    if security_ids is None:
+        df = read_sql(
+            f"""
+            SELECT {cols} FROM price_daily
+            WHERE date BETWEEN CAST(:start AS date) AND CAST(:end AS date)
+            """,
+            {"start": start, "end": end},
+            dev=dev,
+        )
+    else:
+        ids = [int(x) for x in security_ids]
+        df = read_sql(
+            f"""
+            SELECT {cols} FROM price_daily
+            WHERE date BETWEEN CAST(:start AS date) AND CAST(:end AS date)
+              AND security_id = ANY(:ids)
+            """,
+            {"start": start, "end": end, "ids": ids},
+            dev=dev,
+        )
+    df["date"] = _to_dt64ns(df["date"])
+    for col in columns:
+        if col != "price_quality":
+            df[col] = df[col].astype("float64")
+    return df
+
+
+def index_prices(
+    symbol: str = "^GSPC",
+    start: str | None = None,
+    end: str | None = None,
+    dev: bool = False,
+) -> pd.DataFrame:
+    """Index EOD from ``market.index_price_daily`` (not joined to ``security``)."""
+    df = read_sql(
+        """
+        SELECT date, close, close_adj, price_quality
+        FROM market.index_price_daily
+        WHERE symbol = :symbol
+          AND (CAST(:start AS date) IS NULL OR date >= CAST(:start AS date))
+          AND (CAST(:end AS date) IS NULL OR date <= CAST(:end AS date))
+        ORDER BY date
+        """,
+        {"symbol": symbol, "start": start, "end": end},
+        dev=dev,
+    )
+    df["date"] = _to_dt64ns(df["date"])
+    for col in ("close", "close_adj"):
+        df[col] = df[col].astype("float64")
+    return df
+
+
+def treasury_rates(start: str | None = None, end: str | None = None, dev: bool = False) -> pd.DataFrame:
+    """Daily Treasury curve; use ``month3`` as the risk-free rate."""
+    df = read_sql(
+        """
+        SELECT date, month1, month3, year1, year10
+        FROM treasury_rate
+        WHERE (CAST(:start AS date) IS NULL OR date >= CAST(:start AS date))
+          AND (CAST(:end AS date) IS NULL OR date <= CAST(:end AS date))
+        ORDER BY date
+        """,
+        {"start": start, "end": end},
+        dev=dev,
+    )
+    df["date"] = _to_dt64ns(df["date"])
+    for col in ("month1", "month3", "year1", "year10"):
+        df[col] = df[col].astype("float64")
+    return df
+
+
+def symbol_asof(keys: pd.DataFrame, history: pd.DataFrame | None = None, dev: bool = False) -> pd.Series:
+    """Ticker valid on each ``keys.date`` (half-open ``[valid_from, valid_to)``)."""
+    hist = history if history is not None else symbol_history(dev=dev)
+    left = keys[["security_id", "date"]].copy().reset_index(drop=True)
+    left["date"] = pd.to_datetime(left["date"]).astype("datetime64[ns]")
+    left["security_id"] = left["security_id"].astype("int64")
+    left["_i"] = np.arange(len(left))
+    right = hist.copy()
+    right["valid_from"] = pd.to_datetime(right["valid_from"]).astype("datetime64[ns]")
+    right["valid_to"] = pd.to_datetime(right["valid_to"]).astype("datetime64[ns]")
+    right["security_id"] = right["security_id"].astype("int64")
+    right["valid_to"] = right["valid_to"].fillna(pd.Timestamp("2262-04-11"))
+    # Interval join: one history row per security covers most names; still cheap.
+    m = left.merge(right, on="security_id", how="left")
+    ok = (m["date"] >= m["valid_from"]) & (m["date"] < m["valid_to"])
+    m = m.loc[ok, ["_i", "symbol"]].drop_duplicates("_i", keep="last")
+    out = left[["_i"]].merge(m, on="_i", how="left")
+    return out.sort_values("_i")["symbol"].reset_index(drop=True)
+
+
+def _asof_last_n_one_sid(
+    gkeys: pd.DataFrame,
+    gf: pd.DataFrame,
+    value_cols: list[str],
+    n: int,
+    max_staleness_days: int | None,
+    max_gap_days: int,
+) -> pd.DataFrame | None:
+    """Per-security worker for ``asof_last_n_quarters`` (thread-safe on local arrays)."""
+    if gf is None or gf.empty:
+        return None
+    avail = (
+        pd.to_datetime(gf["date_available"], utc=True)
+        .dt.tz_localize(None)
+        .to_numpy(dtype="datetime64[ns]")
+    )
+    fpe = gf["fiscal_period_end"].to_numpy(dtype="datetime64[ns]")
+    vals = {c: gf[c].to_numpy() for c in value_cols}
+    rows = []
+    for ridx, cut in zip(gkeys["_row"].to_numpy(), gkeys["_cutoff"].to_numpy(), strict=True):
+        cut_ns = np.datetime64(pd.Timestamp(cut).tz_convert("UTC").tz_localize(None), "ns")
+        hi = int(np.searchsorted(avail, cut_ns, side="right"))
+        if hi == 0:
+            continue
+        end = hi - 1
+        if max_staleness_days is not None and avail[end] < cut_ns - np.timedelta64(
+            max_staleness_days, "D"
+        ):
+            continue
+        idxs = []
+        last_fpe = None
+        for j in range(end, -1, -1):
+            if last_fpe is not None and fpe[j] >= last_fpe:
+                continue
+            if last_fpe is not None and (last_fpe - fpe[j]) > np.timedelta64(max_gap_days, "D"):
+                break
+            if last_fpe is not None and (last_fpe - fpe[j]) < np.timedelta64(1, "D"):
+                continue
+            idxs.append(j)
+            last_fpe = fpe[j]
+            if len(idxs) == n:
+                break
+        rec: dict = {"_row": int(ridx), "ttm_ok": len(idxs) == n}
+        for k, j in enumerate(idxs):
+            for c in value_cols:
+                rec[f"q{k}_{c}"] = vals[c][j]
+            rec[f"q{k}_date_available"] = avail[j]
+            rec[f"q{k}_fiscal_period_end"] = fpe[j]
+        rows.append(rec)
+    return pd.DataFrame(rows) if rows else None
+
+
+def asof_last_n_quarters(
+    keys: pd.DataFrame,
+    fund: pd.DataFrame,
+    n: int = 4,
+    max_staleness_days: int | None = 548,
+    cutoff: time = time(16, 0),
+    max_gap_days: int = 120,
+    n_jobs: int = -1,
+) -> pd.DataFrame:
+    """Last ``n`` quarterly rows public by cutoff for each key, wide-formatted.
+
+    Returns columns ``q0_<col>`` (latest) … ``q{n-1}_<col>``, plus ``ttm_ok``
+    (True when all ``n`` rows exist and consecutive fiscal ends are ≤ ``max_gap_days`` apart).
+    """
+    left = keys[["security_id", "date"]].copy().reset_index(drop=True)
+    left["_cutoff"] = asof_cutoff(left["date"], cutoff)
+    left["_row"] = left.index
+    value_cols = [
+        c
+        for c in fund.columns
+        if c
+        not in (
+            "security_id",
+            "date_available",
+            "date_source",
+            "filer_type",
+            "zero_lag_reimputed",
+        )
+    ]
+    fund_sorted = fund.sort_values(["security_id", "date_available", "fiscal_period_end"])
+    fund_sorted["date_available"] = pd.to_datetime(fund_sorted["date_available"], utc=True).astype(
+        "datetime64[ns, UTC]"
+    )
+    fund_sorted["fiscal_period_end"] = pd.to_datetime(fund_sorted["fiscal_period_end"]).astype(
+        "datetime64[ns]"
+    )
+    fund_by = {sid: g for sid, g in fund_sorted.groupby("security_id", sort=False)}
+    groups = list(left.groupby("security_id", sort=False))
+    parts = Parallel(n_jobs=n_jobs, prefer="threads")(
+        delayed(_asof_last_n_one_sid)(
+            gkeys, fund_by.get(sid), value_cols, n, max_staleness_days, max_gap_days
+        )
+        for sid, gkeys in groups
+    )
+    out_frames = [p for p in parts if p is not None and len(p)]
+    if not out_frames:
+        empty = left[["_row"]].copy()
+        empty["ttm_ok"] = False
+        return empty
+    wide = pd.concat(out_frames, ignore_index=True)
+    return left[["_row", "security_id", "date"]].merge(wide, on="_row", how="left").drop(
+        columns="_row"
+    )
