@@ -8,6 +8,8 @@ venv/
 /outputs/
 *.parquet
 *.csv
+!tests/fixtures/**/*.csv
+!reports/**/*.csv
 *.pkl
 *.joblib
 *.pt
