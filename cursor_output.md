@@ -21,9 +21,10 @@ Full suite on main after merge: **21 passed** in 0.89 s.
 
 ## Push
 
-- `git push origin main` succeeded (`1373836..eae210e`, then report commits)
+- `git push origin main` succeeded (merge at `eae210e`; report commits follow)
 - Feature branches left in place (`feat/panel`, `feat/panel-ms02-rebuild` not deleted)
 
-## Final main SHA
+## Main SHA
 
-**`ec80a0c3e5984df8f6472d0de3001d2f1b86487f`** (tip; merge commit is `eae210e`)
+- Merge commit on main: **`eae210e604a258652916f7a7cd7be543e2c85734`**
+- Tip of main after this report: run `git rev-parse origin/main` (report commits sit on top of the merge)
