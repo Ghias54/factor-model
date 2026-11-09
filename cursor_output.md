@@ -1,87 +1,95 @@
-# Cursor Output — classic factors vs Ken French
+# Cursor Output — walk-forward Lasso / Ridge
 
 Date: 2026-11-08  
-Branch: `feat/classic-factors`
+Branch: `feat/walkforward-linear`
 
 ## Summary
 
-Built Ken French monthly factors (FF5 + UMD) into `data/external/ff/`, computed our classic four long-short returns (decile EW/VW and universe-breakpoint 2×3 VW) from `features_raw.parquet` through formation **2023-11** / return month **2023-12**, and ran the long-only top-decile baseline plus classic-4 composite. **29 tests passed**, including holdout guards. Equal-weight decile spreads clear the 0.6 bar vs HML/SMB/UMD/RMW; several value-weighted and 2×3 variants miss — expected given top-1000 vs all-exchange FF universe and our own breakpoints (no NYSE flag). Wall ~10 s, peak RSS ~0.8 GB.
+Walk-forward engine is in place (yearly January refits, 36-month validation by mean rank IC, holdout-capped at formation 2023-11). Target = `2 * target_rank − 1` (matches feature [−1, 1] scale). Over OOS formation **2011-01 → 2023-11**, **Lasso and Ridge both beat the classic-4 composite and the EW universe** on Sharpe (0.67 / 0.64 vs 0.62 / 0.56). Sharpe gaps vs classic-4 are positive but the 12-month block-bootstrap 95% CIs include zero. **36 tests passed** (timing, holdout, leakage shuffle mean |IC| < 0.005). Wall ~21 s, peak RSS ~0.9 GB.
 
-## Correlation vs Fama–French (n = 215 months)
+## Head-to-head (OOS 2011–2023)
 
-Breakpoints: **our top-1000 universe** (no NYSE flag). Pass = corr ≥ 0.6.
+| Portfolio | Ann ret | Ann vol | Sharpe | Max DD | Turnover | Excess vs EW | IR | Mean rank IC | Sharpe − classic4 (95% CI) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| EW universe | 9.1% | 16.2% | 0.56 | −26% | — | — | — | — | — |
+| classic-4 composite | 10.8% | 17.7% | 0.62 | −31% | 0.28 | +1.7% | 0.34 | 0.019 | — |
+| Lasso | 12.1% | 18.2% | **0.67** | −29% | 0.46 | +2.9% | 0.54 | 0.026 | +0.05 [−0.22, +0.36] |
+| Ridge | 11.5% | 18.4% | **0.64** | −29% | 0.48 | +2.5% | 0.49 | 0.028 | +0.02 [−0.22, +0.29] |
 
-| Factor | Version | FF | Corr | 2006–10 | 2011–20 | 2021–23 | ≥0.6? |
-|---|---|---|---:|---:|---:|---:|---|
-| value | decile EW | HML | 0.705 | 0.700 | 0.706 | 0.740 | pass |
-| value | decile VW | HML | 0.375 | 0.333 | 0.621 | 0.670 | **miss** |
-| value | 2×3 VW | HML | 0.621 | 0.459 | 0.866 | 0.863 | pass |
-| size | decile EW | SMB | 0.690 | 0.851 | 0.628 | 0.676 | pass |
-| size | decile VW | SMB | 0.316 | 0.204 | 0.439 | 0.262 | **miss** |
-| size | 2×3 VW | SMB | 0.518 | 0.308 | 0.723 | 0.782 | **miss** |
-| momentum | decile EW | UMD | 0.886 | 0.931 | 0.838 | 0.866 | pass |
-| momentum | decile VW | UMD | 0.584 | 0.472 | 0.746 | 0.748 | **miss** |
-| momentum | 2×3 VW | UMD | 0.591 | 0.542 | 0.680 | 0.616 | **miss** |
-| ROE | decile EW | RMW | 0.665 | 0.559 | 0.555 | 0.799 | pass |
-| ROE | decile VW | RMW | 0.558 | 0.359 | 0.555 | 0.759 | **miss** |
-| ROE | 2×3 VW | RMW | 0.615 | 0.497 | 0.486 | 0.877 | pass |
+Excess vs EW (ann. mean of monthly active), 95% block-bootstrap CI: Lasso +2.9% [in summary]; Ridge +2.5%.
 
-**Why misses (not tuned):**  
-- **Top-1000 large-cap** vs FF’s all NYSE/AMEX/NASDAQ — size/value VW spreads are dominated by mega-caps that barely move in our universe.  
-- **Universe breakpoints** (not NYSE 30/70) compress the characteristic spread, especially for SMB 2×3.  
-- **VW vs EW:** EW matches FF better here because equal weight restores small/mid names inside the top 1000; VW collapses toward the largest names.  
-- **ROE vs RMW:** we use TTM net income / equity; RMW is operating profitability — definition gap shows in early subperiods.
+## Excess vs EW by year (ann. mean × 12)
 
-12-month rolling correlation PNGs: `reports/classic_factors/rolling_corr_*.png`.  
-Corr matrices: `corr_matrix_ours_2x3.csv`, `corr_matrix_ff.csv`.
-
-## Long-only baseline (top decile, EW, 1-month hold)
-
-vs equal-weight universe; RF = FF RF. Formation ≤ 2023-11.
-
-| Portfolio | Ann ret | Ann vol | Sharpe | Max DD | Turnover | Excess vs EW univ | IR | Rank IC |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| long value | 8.1% | 22.7% | 0.40 | −68% | 0.11 | −0.1% | 0.04 | −0.002 |
-| long size (small) | 8.1% | 19.7% | 0.43 | −53% | 0.35 | −0.4% | −0.04 | −0.001 |
-| long momentum | 8.4% | 21.5% | 0.43 | −58% | 0.30 | −0.2% | 0.04 | 0.010 |
-| long ROE | 11.3% | 16.9% | 0.65 | −48% | 0.08 | +2.0% | 0.40 | 0.023 |
-| classic-4 composite | 8.7% | 18.7% | 0.47 | −51% | 0.29 | −0.0% | 0.03 | 0.014 |
-| EW universe | 8.7% | 17.9% | 0.49 | −52% | — | — | — | — |
-
-Top-minus-bottom EW spread (ann. mean of monthly LS): value 4.7%, size 1.9%, momentum 4.7%, ROE 6.1%, composite 6.7%.
+| Year | classic4 | Lasso | Ridge |
+|---:|---:|---:|---:|
+| 2011 | +2.9% | −4.8% | −5.0% |
+| 2012 | +4.4% | +9.2% | +8.6% |
+| 2013 | +5.6% | +1.0% | +3.0% |
+| 2014 | −5.1% | +0.8% | +3.6% |
+| 2015 | +6.0% | +1.6% | +2.6% |
+| 2016 | −0.9% | −4.0% | −6.0% |
+| 2017 | −1.9% | +4.7% | +4.8% |
+| 2018 | −4.8% | +4.4% | −4.1% |
+| 2019 | −1.8% | +5.5% | +7.4% |
+| 2020 | −3.4% | +11.6% | +8.6% |
+| 2021 | +8.3% | +7.3% | +6.1% |
+| 2022 | +11.0% | −1.3% | +0.1% |
+| 2023 | +3.5% | +3.0% | +3.1% |
 
 ### Regimes
 
-| Portfolio | COVID 2020-02→12 ann | Rate-hike 2022 ann |
+| | COVID 2020-02→12 Sharpe | Rate-hike 2022 Sharpe |
 |---|---:|---:|
-| long value | +3.2% | −8.0% |
-| long size | +11.5% | −23.6% |
-| long momentum | +39.9% | −12.3% |
-| long ROE | +22.4% | −15.5% |
-| classic-4 | +12.9% | −10.9% |
-| EW universe (implied via excess) | — | — |
+| EW universe | 0.69 | −0.86 |
+| classic-4 | 0.52 | −0.33 |
+| Lasso | **0.98** | −0.71 |
+| Ridge | **0.91** | −0.68 |
+
+## Lasso selection
+
+Stable positive every year: cashflow_to_price, beta_60m, reversal_36_13, gross_profit_to_assets.  
+Stable negative every year: max_daily_ret_1m.  
+High survival (≥75% of years): accruals (−), momentum_12_1 (+ after early years), amihud (−), sue (+), sales_to_price.
+
+**Sign flips across years:** accruals, asset_growth_yoy, gross_margin, momentum_12_1, momentum_6m, sales_to_price, size_ln_mcap, turnover, volatility_12m.
+
+Top |coef| (Lasso avg): amihud, gross_profit_to_assets, beta_60m, dollar_volume_ln, cashflow_to_price.  
+Lasso vs Ridge importance rank correlation (Spearman): **0.95**.
+
+## Timing checks
+
+All 13 refit years (2011–2023): max train formation = Dec of Y−1 < first prediction of Y; last 2023 prediction = 2023-11-30. See `reports/linear/timing_checks.csv`.
+
+## Engine interface (for RF / XGB / MLP next)
+
+```text
+BaseModel (src/factor_model/models/base.py)
+  name: str
+  param_grid: dict[str, list]
+  fit(X, y, feature_names=None) -> self
+  predict(X) -> ndarray
+  clone(**params) -> BaseModel
+  coefficients_: optional pd.Series after fit
+
+WalkForwardEngine.run(model, panel) -> WalkForwardResult
+  predictions parquet: security_id, formation_month, prediction, realized_ret, …
+  year_fits JSON: chosen params, validation IC, coefficients
+```
 
 ## Saved where
 
 | Path | Contents |
 |---|---|
-| `data/external/ff/ff_factors.parquet` + `meta.json` | Ken French monthly (decimal); source URLs + download date |
-| `data/factors/classic_factor_returns.parquet` | Decile EW/VW + 2×3 spreads |
-| `data/factors/classic_long_only_returns.parquet` | Long-only + EW universe |
-| `data/factors/classic_long_only_turnover.parquet` | Monthly turnover |
-| `reports/classic_factors/` | CSVs, rolling-corr PNGs, `summary.json` |
-| `src/factor_model/external/ff.py` | Loader |
-| `src/factor_model/factors/classic.py` | Sorts + holdout caps |
-| `scripts/run_classic_factors.py` | End-to-end runner |
-
-## Tests / merge gate
-
-- Full suite: **29 passed** (holdout tests assert no formation after 2023-11 / no return month after 2023-12 on saved series).  
-- Step 5 holdout check: **pass**.  
-- Merge to main: **`dd6721b`** (`Merge classic factors vs Ken French (pre-holdout baselines)`).
+| `data/predictions/lasso_predictions.parquet` | OOS predictions |
+| `data/predictions/ridge_predictions.parquet` | OOS predictions |
+| `data/predictions/fits/*_year_fits.json` | Per-year params / coefs / val IC |
+| `reports/linear/` | metrics, regimes, selection tables, cumulative chart |
+| `src/factor_model/walkforward/` | engine |
+| `src/factor_model/models/` | BaseModel, Lasso, Ridge |
 
 ## Not done / skipped
 
-- No hyperparameter / breakpoint tuning to raise FF correlations.  
-- Did not evaluate or peek at holdout formation months 2023-12+.  
-- FF parquet/meta live under gitignored `data/` (local only); fixtures under `tests/fixtures/ff/` are committed.
+- RF, XGBoost, MLP, ensemble (next task).  
+- No holdout 2024+ evaluation.  
+- Did not retune grids to chase Sharpe (alphas chosen only by validation IC).  
+- Prediction parquets under gitignored `data/`; reports CSVs/PNG committed.

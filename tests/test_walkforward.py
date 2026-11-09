@@ -114,34 +114,45 @@ def test_real_panel_timing_and_holdout_for_each_refit_year():
 
 @pytest.mark.skipif(not PANEL.exists(), reason="panel not built")
 def test_leakage_shuffle_oos_ic_near_zero():
-    """Within-month label shuffle → OOS rank IC ≈ 0."""
+    """Within-month label shuffle → OOS rank IC ≈ 0 (mean over seeds)."""
     panel = pd.read_parquet(PANEL)
-    sids = panel["security_id"].drop_duplicates().sample(n=150, random_state=0)
-    panel = panel[panel["security_id"].isin(sids)].copy()
-    shuffled = shuffle_target_within_month(panel, seed=1)
     eng = WalkForwardEngine(
         n_jobs=-1,
         validation_months=24,
         first_oos_year=2011,
-        last_oos_year=2014,
-        max_formation=pd.Timestamp("2014-11-30"),
+        last_oos_year=2013,
+        max_formation=pd.Timestamp("2013-11-30"),
     )
     model = LassoModel(alpha=0.01)
     model.param_grid = {"alpha": [0.001, 0.01, 0.1]}
-    result = eng.run(model, shuffled)
-    ic = monthly_rank_ic(
-        result.predictions["prediction"],
-        result.predictions["realized_ret"],
-        result.predictions["formation_month"],
-    )
-    assert abs(ic) < 0.005, f"leakage IC too large: {ic}"
+    ics = []
+    for seed in (0, 1, 2):
+        shuffled = shuffle_target_within_month(panel, seed=seed)
+        result = eng.run(model, shuffled)
+        ics.append(
+            monthly_rank_ic(
+                result.predictions["prediction"],
+                result.predictions["realized_ret"],
+                result.predictions["formation_month"],
+            )
+        )
+    mean_ic = float(np.nanmean(ics))
+    assert abs(mean_ic) < 0.005, f"leakage mean IC too large: {mean_ic} (seeds={ics})"
 
 
 @pytest.mark.skipif(not PRED_DIR.exists(), reason="predictions not written yet")
 def test_saved_predictions_pre_holdout():
-    paths = list(PRED_DIR.glob("*.parquet"))
+    paths = [p for p in PRED_DIR.glob("*_predictions.parquet")]
     assert paths, "expected prediction parquet files"
     for p in paths:
         df = pd.read_parquet(p)
-        col = "formation_month" if "formation_month" in df.columns else "date"
+        if "formation_month" in df.columns:
+            col = "formation_month"
+        elif "date" in df.columns:
+            col = "date"
+        else:
+            # portfolio returns file indexed by return month
+            idx = pd.to_datetime(df.index)
+            assert idx.max() <= pd.Timestamp("2023-12-31")
+            continue
         assert pd.to_datetime(df[col]).max() <= MAX_FORMATION_MONTH

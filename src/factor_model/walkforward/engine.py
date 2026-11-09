@@ -48,6 +48,8 @@ def monthly_rank_ic(pred: pd.Series, realized_ret: pd.Series, dates: pd.Series) 
     for _, g in df.groupby("d", sort=False):
         if len(g) < 20:
             continue
+        if g["p"].nunique(dropna=True) < 2 or g["r"].nunique(dropna=True) < 2:
+            continue
         ics.append(g["p"].corr(g["r"], method="spearman"))
     return float(np.nanmean(ics)) if ics else float("nan")
 
