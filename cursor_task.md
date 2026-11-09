@@ -60,4 +60,4 @@ cursor_output.md with:
 Plain names, no unexplained codes.
 
 ## Status
-[ ] Not started
+[x] Done — see cursor_output.md
