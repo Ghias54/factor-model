@@ -26,4 +26,5 @@ Full suite on main after merge: **21 passed** in 0.89 s.
 
 ## Final main SHA
 
-**`eae210e604a258652916f7a7cd7be543e2c85734`**
+- Merge commit (on main): **`eae210e604a258652916f7a7cd7be543e2c85734`**
+- Tip of main after this report commit: see `git rev-parse origin/main` (report commit follows `eae210e`)
