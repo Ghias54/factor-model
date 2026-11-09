@@ -78,7 +78,7 @@ Top-minus-bottom EW spread (ann. mean of monthly LS): value 4.7%, size 1.9%, mom
 
 - Full suite: **29 passed** (holdout tests assert no formation after 2023-11 / no return month after 2023-12 on saved series).  
 - Step 5 holdout check: **pass**.  
-- Merge to main: authorized and performed after green tests (see commits).
+- Merge to main: **`dd6721b`** (`Merge classic factors vs Ken French (pre-holdout baselines)`).
 
 ## Not done / skipped
 
