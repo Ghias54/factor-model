@@ -1,138 +1,141 @@
-# Cursor Output — Per-share / sub-3× split audit
+# Cursor Output — earnings_yield formula + post-backfill panel rebuild
 
-Date: 2026-11-04  
+Date: 2026-11-08  
 Branch: `feat/panel-ms02-rebuild`  
-Panel audited: current MS-02 panel (post mcap-sanity). Backup kept at `data/panel_ms02_pre_split_audit/`.  
-Raw numbers: `logs/split_audit/`. Stockdb was read-only.
+Baseline backup: `data/panel_ms02_pre_ey_fix/` (pre-backfill panel, old EY formula)
 
-## Verdict
+## Summary
 
-**Yes — per-share features are a real panel problem today; tightening the mcap gate to 1.5 is not.** About **19%** of panel rows have a post-fundamentals split that leaves `earnings_yield = TTM EPS / close` on mixed bases; of those with non-null EY, **88%** move by >10% and **68%** shift at least one cross-sectional decile after a mechanical EPS restatement. `sue` shows a similar footprint, but `earnings_event` EPS may already be vendor-restated, so that impact is less certain. The `[1.5, 3]` mcap band the current gate leaves open is mostly **not** split-driven (~24% split-explained); tightening to 1.5 swaps ~1.3k membership slots/month-rows and mostly hits preferreds / dual-class noise. Prefer waiting for `fix/split-restatement` in stock-database for the real fix; do **not** change `max_ratio` to 1.5 now.
+Switched `earnings_yield` from TTM diluted EPS / month-end close to TTM net income / mcap (same dollar basis as sales_to_price and cashflow_to_price), added a 2:1 split-invariance unit test, and rebuilt the panel on post–split-restatement prod. Full suite: **21 passed** before and after. Panel still **248 months × 1,000 names = 248,000 rows**. Backfill moved liquidity/size features on ~143 securities (turnover, dollar volume, Amihud, mcap-linked yields); the formula change re-ranks ~10% of EY rows by at least one decile while Spearman vs old EY stays ~0.98. Vendor sanity replacements: **2,977 → 3,009**. Peak RSS ~7.2 GB; rebuild wall ~304 s.
 
-## Step 1 — Feature / split-basis table
+## Step 0 — Backup and tests
 
-| Feature | Formula | ÷ by | Same split basis? |
-|---|---|---|---|
-| **earnings_yield** | `sum(q0..q3 eps_diluted) / close` | split-adj `close` | **No** — EPS from `fundamental_quarterly` not restated |
-| **sue** | `(eps_actual − eps_estimated) / close` | split-adj `close` | **Uncertain** — surprise from `earnings_event` (vendor often rewrites to today basis); not YoY/std-dev scaled |
-| **turnover** | `volume / WAS_diluted` | WAS (as-of; sanity may restate) | **No** unless `mcap_vendor_sanity` fired |
-| value_bm | `total_equity / mcap` | mcap | OK **if** mcap OK ($-over-$) |
-| size_ln_mcap | `log(mcap)` | — | OK if mcap OK |
-| sales_to_price | `TTM revenue / mcap` | mcap | OK if mcap OK |
-| cashflow_to_price | `TTM CFO / mcap` | mcap | OK if mcap OK |
-| dollar_volume_ln | `log(close × volume)` | — | **Yes** (both split-adj) |
+- Copied `data/panel/` → `data/panel_ms02_pre_ey_fix/`.
+- Pre-change suite: **20 passed** in 1.4 s (then +1 new test → 21).
 
-No dividends-per-share or book-value-per-share features in `compute.py`.  
-Momentum / reversal / vol / beta / Amihud use prices only (same basis).  
-ROE / margins / growth use $-fundamentals only.
+## Step 1 — Old earnings_yield mixed-basis exposure (today’s DB, before code change)
 
-**sue detail:** latest `earnings_event` with `report_date < month-end`, age ≤ 120d; surprise = actual − estimate, scaled by **`close`**, not by historical EPS stdev.
+Audit-style “any split after latest fiscal period end” still flags **48,343 / 248,000 = 19.49%** of panel rows (vs audit 19.48%). That count is almost unchanged because it only looks at corporate_action dates, not whether EPS was already on the price basis.
 
-**earnings_yield detail:** TTM = sum of four quarterly `eps_diluted`, divided by month-end **`close`** (not net income / mcap).
+On post-backfill fundamentals for the same panel keys:
 
-## Step 2 — Exposure and restatement impact
-
-Method: for each row, `cum_split_factor = ∏ ratios` with `ex_date > fund_fiscal_period_end` (EY) or `> report_date` (sue). Restated feature = feature / factor (equivalent to restating EPS onto the price basis). “Exposed” = factor ≠ 1.
-
-### Counts
-
-| Feature | Exposed rows | Share of panel | >10% change | ≥1 decile move |
-|---|---:|---:|---:|---:|
-| earnings_yield | 48,322 | 19.5% | 39,377 | 30,662 |
-| sue | 44,773 | 18.1% | 34,795 | 22,384 |
-
-Lookback-window-only (split between lookback start and month-end): EY **12,436** (5.0%); sue ≈ full post-split set (report→month-end is short, but any later split still restates `close`).
-
-### EY exposed share by year (selected)
-
-| year | n exposed (non-null impact set) | share of year panel | >10% | decile |
-|---:|---:|---:|---:|---:|
-| 2006 | 4,373 | 36.4% | 4,028 | 3,171 |
-| 2010 | 3,337 | 27.8% | 2,965 | 2,394 |
-| 2015 | ~2.4k | ~20% | — | — |
-| 2020 | ~1.5k | ~12% | — | — |
-| 2024 | 522 | 4.4% | 446 | 388 |
-| 2026 | 105 | 1.3% | 87 | 74 |
-
-Older months are worse: more subsequent splits have already restated the entire price history.
-
-Among exposed EY rows, the most common post-period factors are **2.0** (9,849), **4.0**, **3.0**, **1.5** — i.e. ordinary forward splits the 3× mcap gate never sees.
-
-### Worst 30 (by relative change) — top of list
-
-Full list in `logs/split_audit/step2_pershare_impact.json`. Extreme tails are mega-cumulative reverse-split names (CDT, APDN, CETX, GNLN for EY; CYCC, PSTV for sue) where `factor` is tiny and EY/sue near zero → huge relative changes. More representative mid-list movers are ordinary 2:1 / 3:1 names.
-
-## Step 3 — Computed / vendor mcap ratio
-
-### Histogram (universe rows with both mcaps; n=232,116)
-
-| bin | count |
-|---|---:|
-| <0.1 | 809 |
-| 0.1–0.2 | 633 |
-| 0.2–1/3 | 873 |
-| **1/3–1/1.5** | **2,159** |
-| 1/1.5–1/1.2 | 2,480 |
-| 1/1.2–1 | 45,829 |
-| 1–1.2 | 171,839 |
-| 1.2–1.5 | 4,056 |
-| **1.5–2** | **1,538** |
-| **2–3** | **1,228** |
-| 3–4 | 80 |
-| 4–5 | 42 |
-| 5–10 | 122 |
-| >10 | 418 |
-
-- Median ratio **1.009**; **94.2%** within ±20% of 1.
-- Inside current gate but outside a 1.5 gate: **4,925** rows (`[1.5,3]∪[1/3,1/1.5]`).
-- Of those, split after fiscal period end explains **1,199 (24%)**; **3,726 (76%)** have **no** such split → other issues (preferreds, share-class, vendor gaps).
-
-### max_ratio = 1.5 test (config untouched; in-memory only)
-
-| | max_ratio 3.0 (current) | max_ratio 1.5 (test) |
+| Measure | Rows | Share |
 |---|---:|---:|
-| `n_mcap_sanity_replaced` | 2,977 | **8,064** |
-| Membership dropped / added vs current | — | **1,261 / 1,261** |
+| Audit-exposed (post-FPE split) | 48,343 | 19.5% |
+| Any TTM quarter with stockdb `split_factor` set | 1,297 | 0.52% |
+| Actually mixed (exposed and EY_pershare vs EY_dollar disagree >20%) | 5,028 | 2.0% |
+| Actually mixed v2 (exposed, no same-basis evidence) | 2,697 | 1.1% |
 
-Top dropped (months): MDU (126), VLYPO (99), ESRT (56), SNX (48), WOR, POST, LBTYB, OGCP, MLI, BKI, VLYPN, XPO, AGNCO/AGNCM/AGNCN (preferreds), …  
-Top added: SJI, PEB, VIRT, NSS, ZIONO, RAVN, …  
+Among audit-exposed rows, median `(TTM EPS / close) / (TTM NI / mcap)` ≈ **1.00** (p10/p90 ≈ 0.93 / 1.08). Spot checks: AAPL/NVDA/TSLA/GOOGL are heavily audit-exposed but have **no** `split_factor` rows and EY ratio ≈ 1 — vendor already restated ordinary forward-split EPS onto today’s share basis. Stockdb’s backfill only touched the `needs_adjust` set (~227 securities with non-null `split_factor` in FQ; ~86 of those appear in stockdb’s panel-cell summary).
 
-Pattern: tightening pulls in **preferred / special share classes** and mid-cap boundary noise, not cleanly “2:1 split victims.”
+**Why 19.5% ≠ true mixed:** the 11/04 audit treated every post-filing split as proof that EPS and close were on different bases. Ordinary forward splits (NVDA, AAPL, TSLA, GOOGL, …) were already vendor-aligned, so most of that 19.5% was never mixed. True residual mixed basis after the backfill is about **1–2%**. The formula change to NI/mcap still stands (split-proof by construction).
 
-## Recommendations
+Artifacts: `logs/ey_remeasure/step1_remeasure.json`.
 
-1. **Per-share fix now vs wait**  
-   - **earnings_yield: real bug; prefer wait for stockdb `fix/split-restatement`** if it lands before the next model train. If training starts first, temporary options (not applied here): (a) switch EY to `TTM net_income / mcap` (same basis as sales_to_price), or (b) restate TTM EPS by `∏ split ratios after each quarter FPE` inside the panel build.  
-   - **sue: do not panel-patch yet** without proving `earnings_event` EPS is unadjusted; vendor rewrite notes suggest it may already match `close`. Re-check after stockdb fix.  
-   - **turnover:** already patched on sanity-replaced rows; residual risk is sub-3× WAS mismatches — stockdb restatement is the right fix.
+## Step 2 — Feature change
 
-2. **Tighten max_ratio to 1.5?**  
-   - **No.** Only ~24% of the newly caught band is split-explained; collateral damage is large (preferreds, +5k sanity rows, 1.3k membership swaps). Keep **3.0** until stockdb restates WAS; then re-measure and consider lowering.
+In `src/factor_model/features/compute.py`:
 
-## Artifacts
+```text
+earnings_yield = TTM net_income (q0..q3, same asof/staleness as before) / mcap
+```
 
-| Path | Contents |
+Null if fewer than four quarters or mcap missing/≤0; negatives kept. Name unchanged. Docs/config one-liners updated (`configs/default.yaml`, `docs/decisions.md`, `docs/design-decisions-2026-10-20.md`).
+
+## Step 3 — Tests
+
+- Added `tests/test_earnings_yield_split.py`: same NI, price halves, shares double, mcap unchanged → EY unchanged; old EPS/close doubles under unrestated EPS.
+- Full suite: **21 passed**.
+
+## Step 4 — Rebuild and old vs new comparison
+
+Rebuild: wall **304.2 s**, peak RSS **~7.2 GB**, n_jobs=-1. Confirmed **248 months, 248,000 rows, every month 1,000 names**.
+
+Universe membership (vs backup): **135 dropped, 135 added** across 119 months (≤2 slots/month). Sanity replacements **2,977 → 3,009**; vendor mcap fallback rows **17,088 → 17,113**.
+
+### Backfill effect (every feature except earnings_yield)
+
+Inner join 247,865 rows. Changes concentrated in volume/shares/mcap paths; price-only features unchanged.
+
+| Feature | Rows changed | Corr | Share ≥1 decile move |
+|---|---:|---:|---:|
+| amihud | 5,966 | 1.000 | 3.8% |
+| dollar_volume_ln | 5,914 | 0.999 | 3.8% |
+| turnover | 5,820 | 0.972 | 4.2% |
+| size_ln_mcap | 1,353 | 1.000 | 0.6% |
+| cashflow_to_price | 1,315 | 0.999 | 0.8% |
+| value_bm | 1,313 | 1.000 | 0.7% |
+| sales_to_price | 1,234 | 1.000 | 0.7% |
+| sue | 234 | 1.000 | ~0% |
+| (other fund features) | ≤160 | ~1.0 | ≤0.2% |
+| momentum / reversal / vol / beta / max_daily_ret | 0 | 1.0 | 0 |
+
+**143 securities** with any non-EY change. Top 10 by rows changed: SCCO (248), WRB (223), CNQ (222), IBKR (215), BN (204), RJF (189), RTX (174), TT (170), FAST (161), PANW (150).
+
+### Formula effect (earnings_yield old vs new)
+
+| Metric | Value |
 |---|---|
-| `scripts/audit_split_pershare.py` | Audit CLI |
-| `logs/split_audit/step1_feature_basis.json` | Step 1 inventory |
-| `logs/split_audit/step2_pershare_impact.json` | Exposure, by-year, worst 30 |
-| `logs/split_audit/step3_mcap_ratio_hist.json` | Ratio histogram + in-gate split share |
-| `logs/split_audit/step3_max_ratio_1_5_test.json` | 1.5 universe test |
-| `logs/split_audit/summary.json` | Combined |
-| `data/panel_ms02_pre_split_audit/` | Panel backup (untracked) |
+| Rows changed | 220,446 (89%) |
+| Non-null coverage | 220,457 → 220,526 |
+| Pearson (levels) | ~0 (outlier-driven; not useful) |
+| Spearman | **0.978** |
+| Share moving ≥1 cross-sectional decile | **10.2%** |
+
+Spearman by year stays 0.97–0.99 throughout; decile-move share by year ~8–13%.
+
+Artifacts: `logs/ey_remeasure/step4_compare.json`, `logs/ey_remeasure/rebuild.log`.
+
+## Step 5 — Open items from 11/04 audit
+
+### sue — verdict: fine as is
+
+Sampled NVDA/AAPL/TSLA/GOOGL (ordinary forward splits), KNDI/GP (`needs_adjust`, not in top-1000 panel), plus 10 random `needs_adjust` names. For named forward splits, `earnings_event` EPS across the ex-date is closer to a restated history (levels do not drop by ~1/split ratio) than to an unrestated series. On panel months with SUE, `(eps_actual − eps_estimated) / close` matches the dollar form `(surprise × WAS) / mcap` with median ratio **1.0** and **100%** within 20% for NVDA/AAPL/TSLA/GOOGL/WCN/VIAV/DINO. No code change proposed.
+
+### turnover — verdict: fine as is (monitor needs_adjust)
+
+`volume / WAS_diluted` vs `volume / (vendor mcap / close)`:
+
+| Universe | Median ratio | Within ±20% |
+|---|---:|---:|
+| Old (all) | 0.991 | 95.5% |
+| New (all) | 0.991 | 95.4% |
+| Old needs_adjust only | 0.992 | 84.5% |
+| New needs_adjust only | 0.990 | 79.9% |
+
+Overall alignment is unchanged and strong. The `needs_adjust` subset still has a fatter mismatch tail after the backfill (within-20% slipped ~5 pp). **Propose (do not implement):** optional turnover fallback to vendor-implied shares when `|WAS / (vendor_mcap/close) − 1|` exceeds a config threshold (mirrors the mcap sanity path). Not blocking.
+
+### Vendor mcap gate (max_ratio 3.0) — still looks right
+
+Computed/vendor histogram on universe `mcap_computed` (same bins as `logs/split_audit/step3`):
+
+| Band | Old (11/04 panel) | New (post-backfill) |
+|---|---:|---:|
+| within [1/1.2, 1.2] | 94.2% | 94.0% |
+| median ratio | 1.009 | 1.009 |
+| outside 3× (= sanity fires) | 2,977 | 3,009 |
+| 1.5–3 plus 1/3–1/1.5 | 4,923 | 5,331 |
+
+Extremes (`>10`, `<0.1`) barely moved. Backfill did not clear the dual-class / preferred / vendor-noise tail the prior audit called out. **Keep max_ratio at 3.0.**
+
+Artifacts: `logs/ey_remeasure/step5_checks.json`.
 
 ## Commits
 
-| SHA | Message |
-|---|---|
-| `dd60c50` | Add cursor_task for per-share / sub-3x split audit. |
-| *(final)* | Add split/per-share audit script, logs, cursor_output. |
+1. `f5fe912` — Switch earnings_yield to TTM net income / mcap (split-proof).
+2. *(this push)* — Panel rebuild report + Step 4/5 measurement logs + `cursor_output.md`.
 
 ## Not done / skipped
 
-- Did **not** change `configs/default.yaml` or feature code.
-- Did **not** write to stockdb.
-- Did **not** rebuild the production panel (1.5 test wrote only under `logs/split_audit/`).
-- Did **not** merge to `main`.
-- Did **not** delete prior backups.
-- Worst-30 relative-change list is dominated by near-zero EY/sue ÷ tiny factors; interpret tails cautiously.
+- Did not implement turnover vendor-implied fallback (proposal only).
+- Did not change `max_ratio` (decision locked at 3.0).
+- Did not merge to `main`.
+- KNDI/GP not in the top-1000 panel in either build (0 months); SUE/turnover panel checks for those two are N/A (fund `split_factor` rows present).
+- No model training, no holdout evaluation.
+
+## Surprises / judgment calls
+
+- Audit 19.5% was a large overstatement of true mixed-basis EY once vendor-adjusted forward splits are recognized; used both dollar-vs-pershare disagreement and statement/mcap alignment as the “actually mixed” gauges (~1–2%).
+- EY Pearson ≈ 0 overall despite Spearman 0.98 — a few extreme level outliers; reported Spearman and decile moves as the ranking-relevant stats.
+- Post-backfill, `needs_adjust` turnover vs vendor-implied got slightly worse, not better — worth a stockdb follow-up, not a panel blocker.
+- Sanity replacement count rose slightly after backfill (2,977 → 3,009); outside-3× mass was not eliminated.
