@@ -276,16 +276,14 @@ def compute_targets_and_features(
             "q3_cash_from_operations",
         ]
     ].sum(axis=1, min_count=4)
-    ttm_eps = keys[["q0_eps_diluted", "q1_eps_diluted", "q2_eps_diluted", "q3_eps_diluted"]].sum(
-        axis=1, min_count=4
-    )
-
     equity = keys["q0_total_equity"]
     assets = keys["q0_total_assets"]
     keys["value_bm"] = _safe_div(equity, keys["mcap"])
     keys["size_ln_mcap"] = np.log(keys["mcap"].where(keys["mcap"] > 0))
     keys["quality_roe"] = _safe_div(ttm_ni, equity.where(equity > 0))
-    keys["earnings_yield"] = _safe_div(ttm_eps, keys["close"])
+    # Dollar yield (TTM NI / mcap): split-proof; same basis as sales_to_price / cashflow_to_price.
+    # Replaces TTM eps_diluted / close, which mixed share bases after post-filing splits.
+    keys["earnings_yield"] = _safe_div(ttm_ni, keys["mcap"])
     keys["sales_to_price"] = _safe_div(ttm_rev, keys["mcap"])
     keys["cashflow_to_price"] = _safe_div(ttm_cfo, keys["mcap"])
     keys["gross_margin"] = _safe_div(keys["q0_gross_profit"], keys["q0_revenue"])

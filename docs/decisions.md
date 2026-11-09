@@ -6,6 +6,7 @@ Config mirror: `configs/default.yaml`.
 
 | Date | Decision | Reason | Source |
 |------|----------|--------|--------|
+| 2026-11-08 | `earnings_yield` = TTM net income / mcap (keep name) | Split-proof dollar yield; same basis as sales_to_price and cashflow_to_price. Old TTM eps_diluted / close mixed share bases after post-filing splits (audit overstated exposure at 19.5%; true mixed ~1–2% post stockdb restatement, but formula change stands) | cursor_task 2026-11-08; split audit 2026-11-04 |
 | 2026-10-20 | No new FMP pulls; use stockdb as of 2026-10-15 | Subscription is done; gap pull already loaded | design-decisions §1 |
 | 2026-10-20 | Skip pre-2005 price refetch for the 602 truncated delisted names | Irrelevant with a 2006 sample start | design-decisions §1 |
 | 2026-10-20 | Skip stock-database zero-lag fundamentals repair for now | Factor-model loaders already guard with `fundamentals(guard=True)` | design-decisions §1 |

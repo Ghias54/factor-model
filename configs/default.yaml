@@ -40,7 +40,7 @@ features:
     - momentum_12_1            # return t-12 → t-1 (skip most recent month)
     - quality_roe              # TTM net income / latest total_equity; missing if equity ≤ 0
     # Valuation
-    - earnings_yield           # TTM EPS / price
+    - earnings_yield           # TTM net income / mcap (split-proof; was TTM EPS / close)
     - sales_to_price           # TTM revenue / mcap
     - cashflow_to_price        # TTM CFO / mcap
     # Price / risk
