@@ -9,7 +9,7 @@ Authorized by Rehan (this task only).
 
 ## Merge
 
-- `git checkout main && git pull --ff-only origin main` (already at `1373836`)
+- `git checkout main && git pull --ff-only origin main` (was `1373836`)
 - `git merge origin/feat/panel-ms02-rebuild --no-ff`
 - Merge commit: **`eae210e604a258652916f7a7cd7be543e2c85734`**
 - Message: `Merge panel build + MS-02 rebuild (post split-backfill, EY = NI/mcap)`
@@ -21,10 +21,9 @@ Full suite on main after merge: **21 passed** in 0.89 s.
 
 ## Push
 
-- `git push origin main` succeeded (`1373836..eae210e`)
+- `git push origin main` succeeded (`1373836..eae210e`, then report commits)
 - Feature branches left in place (`feat/panel`, `feat/panel-ms02-rebuild` not deleted)
 
 ## Final main SHA
 
-- Merge commit (on main): **`eae210e604a258652916f7a7cd7be543e2c85734`**
-- Tip of main after this report commit: see `git rev-parse origin/main` (report commit follows `eae210e`)
+**`ec80a0c3e5984df8f6472d0de3001d2f1b86487f`** (tip; merge commit is `eae210e`)
