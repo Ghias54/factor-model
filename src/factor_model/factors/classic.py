@@ -32,11 +32,15 @@ LONG_HIGH = {
 
 
 def return_month(formation: pd.Series | pd.Timestamp) -> pd.Series | pd.Timestamp:
-    """Map formation month-end to the return month-end (t → t+1)."""
+    """Map formation month to the calendar month-end of the return month (t → t+1).
+
+    Uses period arithmetic so a trading month-end like 2006-04-28 maps to
+    2006-05-31, not back to 2006-04-30 (which ``MonthEnd(1)`` would do).
+    """
     if isinstance(formation, pd.Timestamp):
-        return pd.Timestamp(formation + pd.offsets.MonthEnd(1))
-    out = pd.to_datetime(formation) + pd.offsets.MonthEnd(1)
-    return pd.to_datetime(out).astype("datetime64[ns]")
+        return (pd.Timestamp(formation).to_period("M") + 1).to_timestamp("M")
+    s = pd.to_datetime(formation)
+    return (s.dt.to_period("M") + 1).dt.to_timestamp("M").astype("datetime64[ns]")
 
 
 def assert_pre_holdout(formation: pd.Series, ret_month: pd.Series | None = None) -> None:

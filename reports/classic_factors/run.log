@@ -1,0 +1,23 @@
+downloading / loading Ken French…
+loading panel…
+building classic factor returns…
+  wrote /home/rehan-ghias/FE-Factor-Model/data/factors/classic_factor_returns.parquet shape=(215, 12)
+{
+  "wall_s": 9.51,
+  "n_return_months": 215
+}
+  factor   version  ff     corr  pass_0.6
+   value decile_ew HML 0.704550      True
+   value decile_vw HML 0.375483     False
+   value       2x3 HML 0.620931      True
+    size decile_ew SMB 0.690182      True
+    size decile_vw SMB 0.315544     False
+    size       2x3 SMB 0.517876     False
+momentum decile_ew UMD 0.885720      True
+momentum decile_vw UMD 0.583544     False
+momentum       2x3 UMD 0.591447     False
+     roe decile_ew RMW 0.665181      True
+     roe decile_vw RMW 0.557690     False
+     roe       2x3 RMW 0.614710      True
+done → /home/rehan-ghias/FE-Factor-Model/reports/classic_factors /home/rehan-ghias/FE-Factor-Model/data/factors
+WALL=9.98 RSS_KB=806316

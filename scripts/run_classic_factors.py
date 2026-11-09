@@ -60,7 +60,9 @@ REGIMES = {
 
 
 def _corr(a: pd.Series, b: pd.Series) -> tuple[float | None, int]:
-    df = pd.DataFrame({"a": a, "b": b}).dropna()
+    a = a[~a.index.duplicated(keep="first")]
+    b = b[~b.index.duplicated(keep="first")]
+    df = pd.concat([a.rename("a"), b.rename("b")], axis=1, sort=True).dropna()
     if len(df) < 12:
         return None, len(df)
     return float(df["a"].corr(df["b"])), len(df)
@@ -233,14 +235,16 @@ def main() -> None:
             rs = summarize(sub, benchmark=bsub, rf=rf.reindex(sub.index))
             long_rows.append({**rs, "name": f"long_{name}", "regime": reg})
 
-    # Composite from rank-scaled panel features (size flipped inside helper)
-    ranked_for_comp = merged.rename(
-        columns={
-            "r_value": "value_bm",
-            "r_size": "size_ln_mcap",
-            "r_mom": "momentum_12_1",
-            "r_roe": "quality_roe",
-        }
+    # Composite from rank-scaled panel features (size flipped inside helper).
+    # Use r_* only — merged already has raw value_bm / size_ln_mcap / …
+    ranked_for_comp = pd.DataFrame(
+        {
+            "value_bm": merged["r_value"],
+            "size_ln_mcap": merged["r_size"],
+            "momentum_12_1": merged["r_mom"],
+            "quality_roe": merged["r_roe"],
+        },
+        index=merged.index,
     )
     comp_score = classic4_composite_score(ranked_for_comp)
     rets_c, turns_c = long_only_top_decile(filt, comp_score, long_high=True)
