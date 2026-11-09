@@ -1,7 +1,7 @@
 # Cursor Output — walk-forward Lasso / Ridge
 
 Date: 2026-11-08  
-Branch: `feat/walkforward-linear`
+Branch: `feat/walkforward-linear` → merged to main as **`f78c5cf`**
 
 ## Summary
 
