@@ -1,31 +1,31 @@
 # Cursor Task - FE-Factor-Model
-Date: 2026-11-10 09:00:18
+Date: 2026-11-10 09:25:49
 From: Claude (claude.ai)
 Repo: /home/rehan-ghias/FE-Factor-Model
 Branch: feat/nonlinear-models
 Priority: high
 
 ## Context
-With the corrected IC (constant months = 0), Lasso's shuffled gate gives mean IC 0.00580 (t 1.73) over 5 seeds, failing |IC| < 0.005 by 0.0008. All other models pass. The seed-to-seed sd for Lasso is 0.0132, so the standard error of a 5-seed mean is about 0.006, which is larger than the 0.005 gate itself. Five seeds can't resolve a 0.005 gate for a model this noisy, and one seed (seed 0, IC 0.024) drives the excess. The principled fix is more evidence, not a looser gate: Lasso walk-forward fits take seconds, so run many more seeds. The gate is unchanged.
+The 40-seed Lasso shuffle gate PASSED: mean 0.00073, 95% CI [-0.0022, 0.0037], t 0.66. Leakage is clean for every model. The merge was blocked only because the corrected IC metric (constant-prediction months = 0) changes Lasso's tuned alpha in 2011, from 1e-5 to 10 (all coefficients zero). That's a legitimate outcome: in the 2008-2010 validation window every non-zero alpha had negative mean IC, so "no signal" (IC 0) wins. The production predictions were made with the old, buggy metric, so they must be regenerated with the corrected one. Only models that can produce constant predictions are affected: per the last report, RF/XGB/MLP/Ridge had zero constant months in validation-relevant scoring, but VERIFY this rather than assume it. The ensemble uses Lasso, so it changes too.
 
-Rehan authorizes merging feat/nonlinear-models into main in this task if the conditions in Step 3 are met.
+Portfolio rule (already decided): in a month where a model's predictions are constant, the portfolio holds the EW universe (no signal = no tilt), and IC = 0.
+
+Rehan authorizes merging feat/nonlinear-models into main in this task if Step 4's conditions hold.
 
 ## Task
-Stay on feat/nonlinear-models. Commit, push. The holdout rule is unchanged.
+Stay on feat/nonlinear-models. Commit, push. The holdout rule is unchanged (no formation month after 2023-11).
 
-Step 1: Lasso shuffle with more seeds. Rerun the full-window (2011-01..2023-11) shuffled walk-forward for Lasso ONLY, with the same grid, tuning and corrected IC (constant months = 0), for 35 NEW seeds (40 total with the existing 5; use different seed values from the first 5). Report:
-- the pooled mean IC across all 40 seeds, its standard error (sd across seed means / sqrt(40)), a 95% CI, and the pooled monthly t;
-- the per-seed distribution (mean, sd, min, max, how many seeds have t > 2; under the null expect about 1 of 40);
-- the total number of constant-prediction months.
-Save to reports/models/leakage_lasso_40seed.csv.
+Step 1: Verify which models' tuning changes. For Ridge, RF, XGBoost and the MLP: from each year's tuning, check whether ANY grid point produced constant predictions in any validation month (under the old metric those months were dropped). If none did for a model, its chosen params are provably unchanged; say so and don't retrain it. If any did, recompute that model's validation IC per grid point with the new metric (refit only where needed) and report whether the chosen params change. If any do, retrain that model's affected years.
 
-Step 2: Validation constant months (report only, no retune). For the REAL Lasso run, refit year by year just enough to recompute the validation IC per alpha in the grid with the old (drop) and new (=0) metric. Report whether the chosen alpha would change in any year. If it changes in any year, list the years and do NOT merge; stop and report.
+Step 2: Retrain Lasso with the corrected tuning, a full walk-forward 2011-01..2023-11 (seconds). Confirm 2011 picks alpha=10, and that 2012-2023 match the earlier choices and coefficients. For constant-prediction months: IC = 0, and the portfolio = the EW universe that month (return and turnover; turnover into and out of EW counted normally).
 
-Step 3: Merge if ALL of these hold:
-- the Lasso 40-seed pooled |mean IC| < 0.005 AND |t| < 2;
-- Step 2 shows no change in the chosen alpha;
-- the full test suite is green.
-Then merge feat/nonlinear-models into main with --no-ff, run the tests on main, push. Otherwise leave it unmerged and report.
+Step 3: Regenerate everything downstream for affected models only: the Lasso predictions, the ensemble (rank-average of Lasso/XGB/MLP; if Lasso is constant in a month, rank-average the remaining two that month and note it), the portfolios, costs, FF6 absolute + active alpha, bootstrap CIs, year-by-year, regimes, the cumulative chart, and the interpretability rows that use Lasso coefficients. Update reports/models/grand_metrics.csv, active_alpha.csv and related. Report before/after for Lasso and the ensemble (Sharpe, net 10bps, excess, active alpha + t, 2011 excess).
+
+Step 4: Run the full test suite. Merge into main with --no-ff, run the tests on main and push, ONLY if:
+- the tests are green;
+- Step 1 found no unexpected parameter changes in other models (or they were retrained and reported);
+- Lasso 2012-2023 matches the earlier fits.
+Otherwise stop and report.
 
 ## Rules
 - Read existing files before editing; keep changes minimal and localized
@@ -43,7 +43,13 @@ Then merge feat/nonlinear-models into main with --no-ff, run the tests on main, 
 - Before finishing: git add -A && git commit -m "<msg>" && git push -u origin feat/nonlinear-models
 
 ## Expected Output in cursor_output.md
-Short cursor_output.md: a verdict line (passed / merged + SHA), the Lasso 40-seed table (mean, sd, SE, CI, t, constant months, seed histogram), the validation constant-month counts, test results, not done / skipped. Plain names.
+Short cursor_output.md:
+1. A verdict line (merged yes/no + SHA).
+2. The Step 1 verification table (constant validation months per model/year, any alpha changes).
+3. The Lasso before/after (2011 and full window) and the ensemble before/after.
+4. The updated head-to-head table for all models (Sharpe, net 10bps, excess, active alpha + t).
+5. Tests, not done / skipped.
+Plain names.
 
 ## Status
 [ ] Not started

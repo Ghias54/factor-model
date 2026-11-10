@@ -222,11 +222,15 @@ def long_only_top_decile(
     score: pd.Series,
     *,
     long_high: bool = True,
+    ew_when_constant: bool = False,
 ) -> tuple[pd.Series, pd.Series]:
     """Equal-weight top decile returns + monthly turnover, indexed by return month.
 
-    ``score`` aligned to ``panel`` index. Turnover = 0.5 * L1 weight change
-    (one-way), using security_id membership of the top decile (equal weight).
+    ``score`` aligned to ``panel`` index. Turnover = one-way fraction replaced
+    using security_id membership of the top decile (equal weight).
+
+    When ``ew_when_constant`` is True and the month's scores are constant (no
+    ranking signal), the portfolio is the equal-weight universe that month.
     """
     df = panel.copy()
     df["_score"] = score.to_numpy()
@@ -238,9 +242,19 @@ def long_only_top_decile(
         if len(g) < 20:
             continue
         g = g.copy()
-        g["_dec"] = _decile_labels(g["_score"])
-        target_dec = g["_dec"].max() if long_high else g["_dec"].min()
-        port = g[g["_dec"] == target_dec]
+        const = (
+            ew_when_constant
+            and (
+                int(g["_score"].nunique(dropna=True)) < 2
+                or float(g["_score"].std(ddof=0) or 0.0) == 0.0
+            )
+        )
+        if const:
+            port = g
+        else:
+            g["_dec"] = _decile_labels(g["_score"])
+            target_dec = g["_dec"].max() if long_high else g["_dec"].min()
+            port = g[g["_dec"] == target_dec]
         ids = set(port["security_id"].astype(int))
         r = float(port["ret_1m"].mean())
         if prev_ids is None:

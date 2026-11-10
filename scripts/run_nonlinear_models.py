@@ -71,7 +71,9 @@ def _universe_turnover(panel: pd.DataFrame) -> pd.Series:
 
 def _port_from_preds(preds: pd.DataFrame):
     panel = preds.rename(columns={"formation_month": "date", "realized_ret": "ret_1m"})
-    rets, turns = long_only_top_decile(panel, panel["prediction"], long_high=True)
+    rets, turns = long_only_top_decile(
+        panel, panel["prediction"], long_high=True, ew_when_constant=True
+    )
     ic = rank_ic(panel, panel["prediction"])
     ls = decile_long_short(panel, "prediction", long_high=True, value_weighted=False)
     return rets, turns, ic, float(ls.mean() * 12)
@@ -128,12 +130,13 @@ def main() -> None:
         walls[Model.name] = w
         print(f"  {Model.name} wall={w:.1f}s rows={len(res.predictions):,}")
 
-    # Ensemble: rank-average of Lasso, XGBoost, MLP
+    # Ensemble: rank-average of Lasso, XGBoost, MLP (skip constant members/month)
     print("ensemble…")
-    ens = rank_average_predictions(
+    ens, ens_log = rank_average_predictions(
         frames, members=["lasso", "xgboost", "mlp"]
     )
     ens.to_parquet(PRED / "ensemble_predictions.parquet", compression="zstd")
+    ens_log.to_csv(REPORT / "ensemble_member_months.csv", index=False)
     frames["ensemble"] = ens
     walls["ensemble"] = 0.0
 

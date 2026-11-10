@@ -189,7 +189,7 @@ def main() -> None:
         missing = [m for m in ENSEMBLE_MEMBERS if m not in members]
         if missing:
             raise RuntimeError(f"ensemble seed {seed} missing {missing}")
-        ens = rank_average_predictions(members, members=ENSEMBLE_MEMBERS)
+        ens, _log = rank_average_predictions(members, members=ENSEMBLE_MEMBERS)
         path = LEAK_DIR / f"ensemble_seed{seed}_predictions.parquet"
         ens.to_parquet(path, compression="zstd")
         st = _ic_stats(ens)
