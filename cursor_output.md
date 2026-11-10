@@ -1,6 +1,6 @@
 # cursor_output — Lasso corrected-IC retrain + merge
 
-**Verdict:** merged **yes** (pending final SHA after merge) · conditions met
+**Verdict:** merged **yes** · `main` @ **7ca3f49**
 
 ## 1. Step 1 — other models' tuning
 
@@ -41,4 +41,9 @@ Ensemble dropped Lasso in 12 months (rank-average of XGB+MLP only).
 
 ## 4. Tests / merge
 
-Full suite green; merge executed under explicit Rehan authorization + conditions.
+**45 passed** on the branch and again on `main` after merge (`7ca3f49`). Push to `origin/main` succeeded.
+
+## 5. Not done / skipped
+
+- Did not retrain Ridge/RF/XGB/MLP (verification found no constant validation months).
+- MLP verification used `n_seeds=1` only to detect flat outputs (production still 5).
