@@ -1,0 +1,13 @@
+{
+  "wall_s": 4063.8,
+  "per_model_wall_s": {
+    "lasso": 0.0,
+    "ridge": 0.0,
+    "random_forest": 1551.266420718981,
+    "xgboost": 36.204271856928244,
+    "mlp": 2379.0690038199537,
+    "ensemble": 0.0
+  },
+  "metrics_file": "/home/rehan-ghias/FE-Factor-Model/reports/models/grand_metrics.csv",
+  "oos": "2011-01-31 \u2192 2023-11-30"
+}

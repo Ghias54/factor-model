@@ -372,11 +372,14 @@ def _run_interpretability(panel, frames, eng, out_dir: Path) -> None:
     plt.savefig(out_dir / "shap_summary_xgb.png", dpi=120, bbox_inches="tight")
     plt.close()
 
-    # XGB interaction pairs (smaller sample)
+    # XGB interaction pairs via booster.predict (sklearn API dropped pred_interactions)
     inter_n = min(3000, len(X_te))
     Xi = X_te[:inter_n]
     try:
-        inter = xgb._model.predict(Xi, pred_interactions=True)
+        import xgboost as xgb_lib
+
+        dmat = xgb_lib.DMatrix(Xi, feature_names=feats)
+        inter = xgb._model.get_booster().predict(dmat, pred_interactions=True)
         # inter shape (n, F+1, F+1) including bias — take feature block
         mean_abs = np.abs(inter[:, :-1, :-1]).mean(axis=0)
         pairs = []
