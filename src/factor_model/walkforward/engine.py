@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -25,6 +26,10 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+
+
+def os_cpu_count() -> int:
+    return os.cpu_count() or 1
 
 from factor_model.factors.classic import MAX_FORMATION_MONTH, return_month
 from factor_model.features.compute import FEATURE_NAMES
@@ -212,27 +217,48 @@ class WalkForwardEngine:
         y_tr: np.ndarray,
         dates_tr: np.ndarray,
         X_va: np.ndarray,
-        y_va: np.ndarray,  # noqa: ARG002 — IC uses realized returns
+        y_va: np.ndarray,
         ret_va: np.ndarray,
         dates_va: np.ndarray,
     ) -> tuple[dict[str, Any], float]:
+        del dates_tr  # reserved for diagnostics
         grid = _param_product(model.param_grid)
         if len(grid) == 1 and grid[0] == {}:
             return {}, float("nan")
 
+        pass_val = bool(getattr(model, "needs_validation", False))
+
         def _eval(params: dict[str, Any]) -> tuple[dict[str, Any], float]:
             m = model.clone(**params)
-            m.fit(X_tr, y_tr, feature_names=self.feature_names)
+            if pass_val:
+                m.fit(
+                    X_tr,
+                    y_tr,
+                    feature_names=self.feature_names,
+                    X_val=X_va,
+                    y_val=y_va,
+                )
+            else:
+                m.fit(X_tr, y_tr, feature_names=self.feature_names)
             pred = m.predict(X_va)
             ic = monthly_rank_ic(
                 pd.Series(pred),
                 pd.Series(ret_va),
                 pd.Series(dates_va),
             )
-            return params, ic
+            # Persist early-stopping length into chosen params for final refit
+            out_params = dict(params)
+            best_n = getattr(m, "best_n_estimators_", None)
+            if best_n is not None:
+                out_params["best_n_estimators"] = int(best_n)
+            return out_params, ic
 
-        results = Parallel(n_jobs=self.n_jobs)(delayed(_eval)(p) for p in grid)
-        # Prefer higher IC; tie-break toward stronger regularization when present
+        # Tree/MLP fits are heavy; limit outer parallelism to avoid oversubscription.
+        outer = self.n_jobs
+        if model.name in {"random_forest", "xgboost", "mlp"}:
+            outer = min(4, os_cpu_count())
+        results = Parallel(n_jobs=outer)(delayed(_eval)(p) for p in grid)
+
         def _key(item: tuple[dict[str, Any], float]) -> tuple:
             params, ic = item
             ic_v = -np.inf if (ic is None or np.isnan(ic)) else ic
@@ -283,11 +309,25 @@ class WalkForwardEngine:
                 va["date"].to_numpy(),
             )
 
-            # Refit on full training window
+            # Refit on full training window (still pre-OOS). Early-stopping monitors
+            # the last validation_months of that window — never the predicted year.
             X_full = train[self.feature_names].to_numpy(dtype=float)
             y_full = train["y"].to_numpy(dtype=float)
             fitted = model.clone(**chosen)
-            fitted.fit(X_full, y_full, feature_names=self.feature_names)
+            if getattr(model, "needs_validation", False) and "best_n_estimators" in chosen:
+                # XGB: frozen n_estimators from tuning; fit on all train rows
+                fitted.fit(X_full, y_full, feature_names=self.feature_names)
+            elif getattr(model, "needs_validation", False):
+                # MLP: train on full window, early-stop on the val tail
+                fitted.fit(
+                    X_full,
+                    y_full,
+                    feature_names=self.feature_names,
+                    X_val=X_va,
+                    y_val=y_va,
+                )
+            else:
+                fitted.fit(X_full, y_full, feature_names=self.feature_names)
 
             pred_slice = df[df["date"].isin(pred_dates)].copy()
             if pred_slice["date"].max() > self.max_formation:

@@ -20,7 +20,15 @@ class LassoModel(BaseModel):
         super().__init__(alpha=float(alpha), max_iter=int(max_iter), **kwargs)
         self._model: Lasso | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray, feature_names: list[str] | None = None) -> LassoModel:
+    def fit(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: list[str] | None = None,
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
+    ) -> LassoModel:
+        del X_val, y_val
         self.feature_names_ = list(feature_names) if feature_names is not None else None
         self._model = Lasso(
             alpha=self.params["alpha"],
@@ -47,7 +55,15 @@ class RidgeModel(BaseModel):
         super().__init__(alpha=float(alpha), **kwargs)
         self._model: Ridge | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray, feature_names: list[str] | None = None) -> RidgeModel:
+    def fit(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: list[str] | None = None,
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
+    ) -> RidgeModel:
+        del X_val, y_val
         self.feature_names_ = list(feature_names) if feature_names is not None else None
         self._model = Ridge(alpha=self.params["alpha"], fit_intercept=True, random_state=42)
         self._model.fit(X, y)
