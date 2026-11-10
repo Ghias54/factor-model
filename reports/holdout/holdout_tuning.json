@@ -1,0 +1,273 @@
+{
+  "walls_s": {
+    "lasso": 6.152762572048232,
+    "ridge": 1.726412852993235,
+    "random_forest": 753.855924438918,
+    "xgboost": 14.345859830034897,
+    "mlp": 685.3678923698608,
+    "ensemble": 0.0
+  },
+  "fits": {
+    "lasso": [
+      {
+        "year": 2023,
+        "train_end": "2022-12-30",
+        "first_pred": "2023-12-29",
+        "last_pred": "2023-12-29",
+        "chosen_params": {
+          "alpha": 1e-05
+        },
+        "validation_ic": 0.04490342828627453,
+        "note": "2023-12 only; hyperparameters from OOS 2023 fit (not retuned)"
+      },
+      {
+        "year": 2024,
+        "train_end": "2023-12-29",
+        "first_pred": "2024-01-31",
+        "last_pred": "2024-12-31",
+        "chosen_params": {
+          "alpha": 0.0001
+        },
+        "validation_ic": 0.03219900243515101
+      },
+      {
+        "year": 2025,
+        "train_end": "2024-12-31",
+        "first_pred": "2025-01-31",
+        "last_pred": "2025-12-31",
+        "chosen_params": {
+          "alpha": 1e-05
+        },
+        "validation_ic": 0.030595627818375777
+      },
+      {
+        "year": 2026,
+        "train_end": "2025-12-31",
+        "first_pred": "2026-01-30",
+        "last_pred": "2026-08-31",
+        "chosen_params": {
+          "alpha": 0.001
+        },
+        "validation_ic": 0.005638357418999275
+      }
+    ],
+    "ridge": [
+      {
+        "year": 2023,
+        "train_end": "2022-12-30",
+        "first_pred": "2023-12-29",
+        "last_pred": "2023-12-29",
+        "chosen_params": {
+          "alpha": 0.01
+        },
+        "validation_ic": 0.04498890703553482,
+        "note": "2023-12 only; hyperparameters from OOS 2023 fit (not retuned)"
+      },
+      {
+        "year": 2024,
+        "train_end": "2023-12-29",
+        "first_pred": "2024-01-31",
+        "last_pred": "2024-12-31",
+        "chosen_params": {
+          "alpha": 1000.0
+        },
+        "validation_ic": 0.03191592485703681
+      },
+      {
+        "year": 2025,
+        "train_end": "2024-12-31",
+        "first_pred": "2025-01-31",
+        "last_pred": "2025-12-31",
+        "chosen_params": {
+          "alpha": 3.1622776601683795
+        },
+        "validation_ic": 0.030643981985633513
+      },
+      {
+        "year": 2026,
+        "train_end": "2025-12-31",
+        "first_pred": "2026-01-30",
+        "last_pred": "2026-08-31",
+        "chosen_params": {
+          "alpha": 1000.0
+        },
+        "validation_ic": 0.003183420721748728
+      }
+    ],
+    "random_forest": [
+      {
+        "year": 2023,
+        "train_end": "2022-12-30",
+        "first_pred": "2023-12-29",
+        "last_pred": "2023-12-29",
+        "chosen_params": {
+          "max_depth": 8,
+          "min_samples_leaf": 100,
+          "max_features": 0.33
+        },
+        "validation_ic": 0.04231906971204412,
+        "note": "2023-12 only; hyperparameters from OOS 2023 fit (not retuned)"
+      },
+      {
+        "year": 2024,
+        "train_end": "2023-12-29",
+        "first_pred": "2024-01-31",
+        "last_pred": "2024-12-31",
+        "chosen_params": {
+          "max_depth": 8,
+          "min_samples_leaf": 500,
+          "max_features": 0.33
+        },
+        "validation_ic": 0.03474227795233397
+      },
+      {
+        "year": 2025,
+        "train_end": "2024-12-31",
+        "first_pred": "2025-01-31",
+        "last_pred": "2025-12-31",
+        "chosen_params": {
+          "max_depth": 8,
+          "min_samples_leaf": 100,
+          "max_features": 0.5
+        },
+        "validation_ic": 0.03475361251698382
+      },
+      {
+        "year": 2026,
+        "train_end": "2025-12-31",
+        "first_pred": "2026-01-30",
+        "last_pred": "2026-08-31",
+        "chosen_params": {
+          "max_depth": 8,
+          "min_samples_leaf": 100,
+          "max_features": 0.5
+        },
+        "validation_ic": 0.00880924732895335
+      }
+    ],
+    "xgboost": [
+      {
+        "year": 2023,
+        "train_end": "2022-12-30",
+        "first_pred": "2023-12-29",
+        "last_pred": "2023-12-29",
+        "chosen_params": {
+          "max_depth": 6,
+          "learning_rate": 0.05,
+          "min_child_weight": 10,
+          "reg_lambda": 1.0,
+          "best_n_estimators": 48
+        },
+        "validation_ic": 0.04435799139249555,
+        "note": "2023-12 only; hyperparameters from OOS 2023 fit (not retuned)"
+      },
+      {
+        "year": 2024,
+        "train_end": "2023-12-29",
+        "first_pred": "2024-01-31",
+        "last_pred": "2024-12-31",
+        "chosen_params": {
+          "max_depth": 3,
+          "learning_rate": 0.05,
+          "min_child_weight": 50,
+          "reg_lambda": 1.0,
+          "best_n_estimators": 90
+        },
+        "validation_ic": 0.038226185484358494
+      },
+      {
+        "year": 2025,
+        "train_end": "2024-12-31",
+        "first_pred": "2025-01-31",
+        "last_pred": "2025-12-31",
+        "chosen_params": {
+          "max_depth": 6,
+          "learning_rate": 0.01,
+          "min_child_weight": 50,
+          "reg_lambda": 1.0,
+          "best_n_estimators": 213
+        },
+        "validation_ic": 0.040450412009647135
+      },
+      {
+        "year": 2026,
+        "train_end": "2025-12-31",
+        "first_pred": "2026-01-30",
+        "last_pred": "2026-08-31",
+        "chosen_params": {
+          "max_depth": 6,
+          "learning_rate": 0.05,
+          "min_child_weight": 10,
+          "reg_lambda": 1.0,
+          "best_n_estimators": 31
+        },
+        "validation_ic": 0.01543869419047609
+      }
+    ],
+    "mlp": [
+      {
+        "year": 2023,
+        "train_end": "2022-12-30",
+        "first_pred": "2023-12-29",
+        "last_pred": "2023-12-29",
+        "chosen_params": {
+          "hidden": [
+            32,
+            16
+          ],
+          "dropout": 0.1,
+          "weight_decay": 0.001
+        },
+        "validation_ic": 0.05193089099822101,
+        "note": "2023-12 only; hyperparameters from OOS 2023 fit (not retuned)"
+      },
+      {
+        "year": 2024,
+        "train_end": "2023-12-29",
+        "first_pred": "2024-01-31",
+        "last_pred": "2024-12-31",
+        "chosen_params": {
+          "hidden": [
+            64,
+            32,
+            16
+          ],
+          "dropout": 0.1,
+          "weight_decay": 0.01
+        },
+        "validation_ic": 0.054078651257737934
+      },
+      {
+        "year": 2025,
+        "train_end": "2024-12-31",
+        "first_pred": "2025-01-31",
+        "last_pred": "2025-12-31",
+        "chosen_params": {
+          "hidden": [
+            32,
+            16
+          ],
+          "dropout": 0.3,
+          "weight_decay": 0.001
+        },
+        "validation_ic": 0.037946527633791145
+      },
+      {
+        "year": 2026,
+        "train_end": "2025-12-31",
+        "first_pred": "2026-01-30",
+        "last_pred": "2026-08-31",
+        "chosen_params": {
+          "hidden": [
+            64,
+            32,
+            16
+          ],
+          "dropout": 0.3,
+          "weight_decay": 0.01
+        },
+        "validation_ic": 0.031853826781940243
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "spearman_sharpe_oos_vs_holdout": -0.3571428571428572,
+  "scored_names": [
+    "classic4",
+    "lasso",
+    "ridge",
+    "random_forest",
+    "xgboost",
+    "mlp",
+    "ensemble"
+  ]
+}

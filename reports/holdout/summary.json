@@ -1,0 +1,7 @@
+{
+  "wall_s": 1468.84,
+  "ff_last_month": "2026-09-30",
+  "spearman_sharpe_oos_vs_holdout": -0.3571428571428572,
+  "n_holdout_formations": 33,
+  "code_commit_preregistered": "6fff7a54e0b1fe761caaa5dc4caa5ac7c1413a4d"
+}

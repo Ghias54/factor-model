@@ -1,0 +1,4 @@
+year,n_nonzero,n_nonzero_2023,added,dropped,sign_flips_vs_2023
+2024,24,26,,"accruals,turnover",debt_to_assets
+2025,26,26,,,"debt_to_assets,turnover"
+2026,17,26,,"accruals,asset_growth_yoy,current_ratio,debt_to_assets,dollar_volume_ln,earnings_yield,gross_margin,turnover,value_bm",

@@ -1,0 +1,10 @@
+{
+  "n_holdout_formations": 33,
+  "formation_start": "2023-12-29",
+  "formation_end": "2026-08-31",
+  "names_per_month_min": 1000,
+  "names_per_month_max": 1000,
+  "ret_1m_null_share_max": 0.003,
+  "ff_last_month": "2026-09-30",
+  "feature_coverage_flags": []
+}
