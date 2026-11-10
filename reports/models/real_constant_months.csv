@@ -1,0 +1,7 @@
+model,n_constant_pred_months,n_tie_heavy_months,n_flagged
+lasso,0,0,0
+ridge,0,0,0
+xgboost,0,10,10
+random_forest,0,0,0
+mlp,0,0,0
+ensemble,0,0,0

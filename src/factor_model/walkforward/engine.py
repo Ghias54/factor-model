@@ -47,18 +47,38 @@ def scale_target_rank(pct_rank: pd.Series) -> pd.Series:
 def monthly_rank_ic_series(
     pred: pd.Series, realized_ret: pd.Series, dates: pd.Series
 ) -> pd.Series:
-    """Cross-sectional Spearman IC of prediction vs realized return, per month."""
+    """Cross-sectional Spearman IC of prediction vs realized return, per month.
+
+    Months with fewer than 2 unique prediction values (or zero prediction
+    variance) — or fewer than 2 unique realized returns — get IC = 0 rather
+    than being dropped. A model that cannot rank has zero skill that month.
+    The count of constant-prediction months is stored on ``series.attrs['n_constant_pred']``.
+    """
     df = pd.DataFrame({"p": pred, "r": realized_ret, "d": dates}).dropna()
     if df.empty:
-        return pd.Series(dtype=float)
+        out = pd.Series(dtype=float)
+        out.attrs["n_constant_pred"] = 0
+        return out
     ics: dict[pd.Timestamp, float] = {}
+    n_constant_pred = 0
     for d, g in df.groupby("d", sort=True):
         if len(g) < 20:
             continue
-        if g["p"].nunique(dropna=True) < 2 or g["r"].nunique(dropna=True) < 2:
+        key = pd.Timestamp(d)
+        p_n = int(g["p"].nunique(dropna=True))
+        r_n = int(g["r"].nunique(dropna=True))
+        if p_n < 2 or float(g["p"].std(ddof=0) or 0.0) == 0.0:
+            ics[key] = 0.0
+            n_constant_pred += 1
             continue
-        ics[pd.Timestamp(d)] = float(g["p"].corr(g["r"], method="spearman"))
-    return pd.Series(ics, dtype=float)
+        if r_n < 2:
+            ics[key] = 0.0
+            continue
+        ic = float(g["p"].corr(g["r"], method="spearman"))
+        ics[key] = 0.0 if (ic != ic) else ic  # NaN → 0
+    out = pd.Series(ics, dtype=float)
+    out.attrs["n_constant_pred"] = n_constant_pred
+    return out
 
 
 def monthly_rank_ic(pred: pd.Series, realized_ret: pd.Series, dates: pd.Series) -> float:
