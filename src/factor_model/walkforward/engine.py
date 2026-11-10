@@ -44,19 +44,27 @@ def scale_target_rank(pct_rank: pd.Series) -> pd.Series:
     return 2.0 * pct_rank.astype(float) - 1.0
 
 
-def monthly_rank_ic(pred: pd.Series, realized_ret: pd.Series, dates: pd.Series) -> float:
-    """Mean cross-sectional Spearman IC of prediction vs realized return."""
+def monthly_rank_ic_series(
+    pred: pd.Series, realized_ret: pd.Series, dates: pd.Series
+) -> pd.Series:
+    """Cross-sectional Spearman IC of prediction vs realized return, per month."""
     df = pd.DataFrame({"p": pred, "r": realized_ret, "d": dates}).dropna()
     if df.empty:
-        return float("nan")
-    ics = []
-    for _, g in df.groupby("d", sort=False):
+        return pd.Series(dtype=float)
+    ics: dict[pd.Timestamp, float] = {}
+    for d, g in df.groupby("d", sort=True):
         if len(g) < 20:
             continue
         if g["p"].nunique(dropna=True) < 2 or g["r"].nunique(dropna=True) < 2:
             continue
-        ics.append(g["p"].corr(g["r"], method="spearman"))
-    return float(np.nanmean(ics)) if ics else float("nan")
+        ics[pd.Timestamp(d)] = float(g["p"].corr(g["r"], method="spearman"))
+    return pd.Series(ics, dtype=float)
+
+
+def monthly_rank_ic(pred: pd.Series, realized_ret: pd.Series, dates: pd.Series) -> float:
+    """Mean cross-sectional Spearman IC of prediction vs realized return."""
+    s = monthly_rank_ic_series(pred, realized_ret, dates)
+    return float(s.mean()) if len(s) else float("nan")
 
 
 def _param_product(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:

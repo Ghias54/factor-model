@@ -12,7 +12,7 @@ from factor_model.features.compute import FEATURE_NAMES
 from factor_model.models import MLPModel, RandomForestModel, XGBoostModel
 from factor_model.walkforward.engine import (
     WalkForwardEngine,
-    monthly_rank_ic,
+    monthly_rank_ic_series,
     shuffle_target_within_month,
 )
 
@@ -86,34 +86,41 @@ def test_nonlinear_synthetic_respects_holdout(Model):
 @pytest.mark.skipif(not PANEL.exists(), reason="panel not built")
 @pytest.mark.parametrize("Model", [RandomForestModel, XGBoostModel, MLPModel])
 def test_nonlinear_leakage_shuffle_near_zero(Model):
-    """Within-month label shuffle → OOS rank IC ≈ 0 (mean over seeds).
+    """Fast suite gate: short OOS window, many seeds, assert |t| < 2.
 
-    Threshold is looser than Lasso's 0.005: tree/MLP IC has higher
-    finite-sample variance on short OOS windows under shuffle.
+    Absolute |mean IC| < 0.005 is reserved for the full-window script
+    ``scripts/run_leakage_check.py`` (155 months × several seeds). On a
+    2–3 year window the mean alone is too noisy, so this test pools monthly
+    ICs across 5 shuffle seeds and requires |t_mean| < 2 (and |mean| < 0.02
+    as a soft sanity bound).
     """
     panel = pd.read_parquet(PANEL)
     eng = WalkForwardEngine(
         n_jobs=1,
         validation_months=24,
         first_oos_year=2011,
-        last_oos_year=2013,
-        max_formation=pd.Timestamp("2013-11-30"),
+        last_oos_year=2012,
+        max_formation=pd.Timestamp("2012-11-30"),
     )
     model = _small_model(Model)
 
-    ics = []
-    for seed in (0, 1, 2):
+    pooled: list[float] = []
+    for seed in (0, 1, 2, 3, 4):
         shuffled = shuffle_target_within_month(panel, seed=seed)
         result = eng.run(model, shuffled)
-        ics.append(
-            monthly_rank_ic(
-                result.predictions["prediction"],
-                result.predictions["realized_ret"],
-                result.predictions["formation_month"],
-            )
+        series = monthly_rank_ic_series(
+            result.predictions["prediction"],
+            result.predictions["realized_ret"],
+            result.predictions["formation_month"],
         )
-    mean_ic = float(np.nanmean(ics))
-    assert abs(mean_ic) < 0.02, f"{Model.name} leakage IC={mean_ic} (seeds={ics})"
+        pooled.extend(series.dropna().tolist())
+
+    arr = np.asarray(pooled, dtype=float)
+    mean_ic = float(np.mean(arr))
+    sd = float(np.std(arr, ddof=1))
+    t = mean_ic / (sd / np.sqrt(len(arr))) if len(arr) > 1 and sd > 0 else float("nan")
+    assert abs(t) < 2.0, f"{Model.name} leakage t={t} mean={mean_ic} n={len(arr)}"
+    assert abs(mean_ic) < 0.02, f"{Model.name} leakage mean IC={mean_ic} (sanity)"
 
 
 @pytest.mark.skipif(not PRED.exists(), reason="predictions not written")
