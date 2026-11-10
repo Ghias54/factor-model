@@ -1,0 +1,14 @@
+{
+  "wall_s": 6206.2,
+  "pass_abs": 0.005,
+  "pass_t": 2.0,
+  "mlp_internal_seeds": 2,
+  "failures": [
+    "lasso"
+  ],
+  "passed": false,
+  "mlp_forward_shift_mean_ic": 0.01368688863058616,
+  "mlp_forward_shift_t": 1.4037874501953762,
+  "mlp_forward_shift_pos_share": 0.5483870967741935,
+  "max_formation": "2023-11-30"
+}
