@@ -1,0 +1,11 @@
+model,formation_month,constant_pred,tie_frac_at_cutoff,tie_break
+xgboost,2011-01-31,False,0.11345381526104417,rank(method='first') then qcut — ties broken by row order within the month group; 11.3% of names share the cutoff score
+xgboost,2011-02-28,False,0.11670020120724346,rank(method='first') then qcut — ties broken by row order within the month group; 11.7% of names share the cutoff score
+xgboost,2011-03-31,False,0.11546184738955824,rank(method='first') then qcut — ties broken by row order within the month group; 11.5% of names share the cutoff score
+xgboost,2011-05-31,False,0.11758793969849246,rank(method='first') then qcut — ties broken by row order within the month group; 11.8% of names share the cutoff score
+xgboost,2011-06-30,False,0.12588116817724068,rank(method='first') then qcut — ties broken by row order within the month group; 12.6% of names share the cutoff score
+xgboost,2011-07-29,False,0.11144578313253012,rank(method='first') then qcut — ties broken by row order within the month group; 11.1% of names share the cutoff score
+xgboost,2011-08-31,False,0.14098690835850958,rank(method='first') then qcut — ties broken by row order within the month group; 14.1% of names share the cutoff score
+xgboost,2011-09-30,False,0.13266331658291458,rank(method='first') then qcut — ties broken by row order within the month group; 13.3% of names share the cutoff score
+xgboost,2011-11-30,False,0.13480885311871227,rank(method='first') then qcut — ties broken by row order within the month group; 13.5% of names share the cutoff score
+xgboost,2011-12-30,False,0.13969849246231156,rank(method='first') then qcut — ties broken by row order within the month group; 14.0% of names share the cutoff score

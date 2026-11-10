@@ -222,11 +222,15 @@ def long_only_top_decile(
     score: pd.Series,
     *,
     long_high: bool = True,
+    ew_when_constant: bool = False,
 ) -> tuple[pd.Series, pd.Series]:
     """Equal-weight top decile returns + monthly turnover, indexed by return month.
 
-    ``score`` aligned to ``panel`` index. Turnover = 0.5 * L1 weight change
-    (one-way), using security_id membership of the top decile (equal weight).
+    ``score`` aligned to ``panel`` index. Turnover = one-way fraction replaced
+    using security_id membership of the top decile (equal weight).
+
+    When ``ew_when_constant`` is True and the month's scores are constant (no
+    ranking signal), the portfolio is the equal-weight universe that month.
     """
     df = panel.copy()
     df["_score"] = score.to_numpy()
@@ -238,9 +242,19 @@ def long_only_top_decile(
         if len(g) < 20:
             continue
         g = g.copy()
-        g["_dec"] = _decile_labels(g["_score"])
-        target_dec = g["_dec"].max() if long_high else g["_dec"].min()
-        port = g[g["_dec"] == target_dec]
+        const = (
+            ew_when_constant
+            and (
+                int(g["_score"].nunique(dropna=True)) < 2
+                or float(g["_score"].std(ddof=0) or 0.0) == 0.0
+            )
+        )
+        if const:
+            port = g
+        else:
+            g["_dec"] = _decile_labels(g["_score"])
+            target_dec = g["_dec"].max() if long_high else g["_dec"].min()
+            port = g[g["_dec"] == target_dec]
         ids = set(port["security_id"].astype(int))
         r = float(port["ret_1m"].mean())
         if prev_ids is None:
@@ -288,16 +302,33 @@ def classic4_composite_score(panel_ranked: pd.DataFrame) -> pd.Series:
 
 
 def rank_ic(panel: pd.DataFrame, score: pd.Series) -> pd.Series:
-    """Monthly Spearman IC of score vs next-month return."""
+    """Monthly Spearman IC of score vs next-month return.
+
+    Constant (or zero-variance) scores — or constant returns — get IC = 0
+    for that month rather than NaN / drop. Count of constant-score months is
+    on ``series.attrs['n_constant_pred']``.
+    """
     df = panel.copy()
     df["_score"] = score.to_numpy()
     rows = []
+    n_constant_pred = 0
     for dt, g in df.groupby("date", sort=True):
         g = g.dropna(subset=["_score", "ret_1m"])
         if len(g) < 20:
             continue
-        ic = g["_score"].corr(g["ret_1m"], method="spearman")
-        rows.append({"return_month": return_month(pd.Timestamp(dt)), "ic": float(ic)})
+        if (
+            int(g["_score"].nunique(dropna=True)) < 2
+            or float(g["_score"].std(ddof=0) or 0.0) == 0.0
+        ):
+            ic = 0.0
+            n_constant_pred += 1
+        elif int(g["ret_1m"].nunique(dropna=True)) < 2:
+            ic = 0.0
+        else:
+            raw = g["_score"].corr(g["ret_1m"], method="spearman")
+            ic = 0.0 if (raw != raw) else float(raw)
+        rows.append({"return_month": return_month(pd.Timestamp(dt)), "ic": ic})
     s = pd.DataFrame(rows).set_index("return_month")["ic"].sort_index()
     s.index = s.index.astype("datetime64[ns]")
+    s.attrs["n_constant_pred"] = n_constant_pred
     return s

@@ -1,0 +1,6 @@
+feature_a,feature_b,mean_abs_interaction
+reversal_1m,max_daily_ret_1m,0.0009639831259846687
+reversal_1m,momentum_6m,0.0009599556215107441
+quality_roe,earnings_yield,0.0008755343151278794
+sales_to_price,gross_profit_to_assets,0.0008383349631913006
+volatility_12m,gross_profit_to_assets,0.0004971448797732592

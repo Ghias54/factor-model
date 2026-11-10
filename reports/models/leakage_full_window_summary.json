@@ -1,0 +1,9 @@
+{
+  "passed": false,
+  "failures": [
+    "lasso"
+  ],
+  "pass_abs": 0.005,
+  "pass_t": 2.0,
+  "metric": "constant_pred_month_ic_equals_0"
+}

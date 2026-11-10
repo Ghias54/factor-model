@@ -36,12 +36,16 @@ For every task:
 3. When done: `git push -u origin <branch>` and stop. Report the branch and
    commit list in `cursor_output.md`.
 
-4. **Do not merge.** No self-merged PRs, no fast-forwarding `main`.
+4. **Do not merge by default.** No self-merged PRs, no fast-forwarding `main`,
+   unless the current `cursor_task.md` explicitly states that Rehan authorizes
+   merging that specific branch, and every condition the task attaches to the
+   merge is met. Without that explicit authorization, leave the branch unmerged.
 
 5. Never `git push --force`, never rewrite published history, never
    `git reset --hard` committed work.
 
-If a task conflicts with this file, follow this file and say so.
+If a task conflicts with this file, follow this file and say so — except where
+that task carries the explicit merge authorization in (4).
 
 ## What is never committed
 

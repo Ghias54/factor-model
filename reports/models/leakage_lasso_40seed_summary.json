@@ -1,0 +1,19 @@
+{
+  "n_seeds": 40,
+  "pooled_mean_ic": 0.0007294887502305513,
+  "sd_across_seed_means": 0.009469687948035193,
+  "se_mean": 0.0014972891323418716,
+  "ci95_lo": -0.002205197949159517,
+  "ci95_hi": 0.0036641754496206194,
+  "pooled_monthly_mean_ic": 0.0007294887502305508,
+  "pooled_monthly_t": 0.6563665825540075,
+  "n_pooled_months": 6200,
+  "n_constant_pred_total": 2373,
+  "seed_mean_min": -0.017239067631400044,
+  "seed_mean_max": 0.028281818609439596,
+  "n_seeds_t_gt_2": 3,
+  "n_seeds_abs_t_gt_2": 5,
+  "pass_abs": true,
+  "pass_t": true,
+  "pass": true
+}

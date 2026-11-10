@@ -1,0 +1,8 @@
+{
+  "tuning_used_same_skip": true,
+  "tuning_note": "WalkForwardEngine._tune calls monthly_rank_ic, which previously dropped constant-pred validation months. Not retuned this task; validation predictions were not saved, so per-year affected-month counts cannot be recovered without refitting.",
+  "gate_passed": false,
+  "failures": [
+    "lasso"
+  ]
+}

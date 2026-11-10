@@ -1,0 +1,26 @@
+loading panel + FF…
+reused lasso predictions
+reused ridge predictions
+walk-forward random_forest…
+/home/rehan-ghias/FE-Factor-Model/scripts/run_nonlinear_models.py:357: FutureWarning: The NumPy global RNG was seeded by calling `np.random.seed`. In a future version this function will no longer use the global RNG. Pass `rng` explicitly to opt-in to the new behaviour and silence this warning.
+  shap.summary_plot(sv, X_te, feature_names=feats, show=False, max_display=15)
+/home/rehan-ghias/FE-Factor-Model/scripts/run_nonlinear_models.py:370: FutureWarning: The NumPy global RNG was seeded by calling `np.random.seed`. In a future version this function will no longer use the global RNG. Pass `rng` explicitly to opt-in to the new behaviour and silence this warning.
+  shap.summary_plot(sv, X_te, feature_names=feats, show=False, max_display=15)
+  random_forest wall=1551.3s rows=154,643
+walk-forward xgboost…
+  xgboost wall=36.2s rows=154,643
+walk-forward mlp…
+  mlp wall=2379.1s rows=154,643
+ensemble…
+interpretability…
+         name  ann_return   sharpe  max_drawdown  turnover  excess_vs_benchmark  net_sharpe_10bps  net_sharpe_25bps  ff6_alpha_ann  ff6_alpha_t  ff6_beta_Mkt_RF  rank_ic_mean
+  ew_universe    0.090826 0.564052     -0.262760  0.031031                  NaN          0.559593          0.552889      -0.022699    -2.717613         0.984796           NaN
+     classic4    0.107645 0.616782     -0.305125  0.281247             0.017019          0.579001          0.522270      -0.018312    -1.340180         1.068201      0.019099
+        lasso    0.120706 0.668407     -0.293265  0.459899             0.029397          0.608098          0.517540      -0.013951    -0.879902         1.113278      0.026078
+        ridge    0.114966 0.636073     -0.285219  0.482801             0.024608          0.573195          0.478826      -0.018958    -1.220680         1.123586      0.027895
+random_forest    0.107698 0.593392     -0.378444  0.442999             0.017312          0.536671          0.451529      -0.027068    -1.654522         1.136334      0.033404
+      xgboost    0.109365 0.601214     -0.349490  0.484036             0.019217          0.539188          0.446085      -0.022360    -1.536968         1.124536      0.034012
+          mlp    0.139393 0.770812     -0.273927  0.454157             0.045700          0.709870          0.618437       0.000276     0.016207         1.104263      0.029120
+     ensemble    0.136548 0.748738     -0.297138  0.461452             0.043544          0.687745          0.596220      -0.003270    -0.212017         1.117130      0.032577
+done wall= 4063.8
+WALL=4066.62 RSS_KB=1852624

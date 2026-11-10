@@ -1,0 +1,18 @@
+{
+  "ridge": {
+    "any_constant_val": false,
+    "any_params_changed": false
+  },
+  "xgboost": {
+    "any_constant_val": false,
+    "any_params_changed": false
+  },
+  "random_forest": {
+    "any_constant_val": false,
+    "any_params_changed": false
+  },
+  "mlp": {
+    "any_constant_val": false,
+    "any_params_changed": false
+  }
+}

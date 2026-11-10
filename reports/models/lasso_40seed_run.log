@@ -1,0 +1,163 @@
+loading panel…
+Lasso shuffle seeds 0-39…
+  reuse seed=0
+  reuse seed=1
+  reuse seed=2
+  reuse seed=3
+  reuse seed=4
+  walk-forward lasso seed=5…
+  seed=5 wall=26.6s mean_ic=0.00692 t=0.81 const=36
+  walk-forward lasso seed=6…
+  seed=6 wall=18.5s mean_ic=0.00162 t=0.43 const=83
+  walk-forward lasso seed=7…
+  seed=7 wall=19.9s mean_ic=-0.00114 t=-0.17 const=59
+  walk-forward lasso seed=8…
+  seed=8 wall=30.7s mean_ic=-0.00469 t=-0.68 const=48
+  walk-forward lasso seed=9…
+  seed=9 wall=17.9s mean_ic=-0.01724 t=-1.75 const=83
+  walk-forward lasso seed=10…
+  seed=10 wall=20.5s mean_ic=-0.00742 t=-1.04 const=60
+  walk-forward lasso seed=11…
+  seed=11 wall=27.3s mean_ic=0.00497 t=0.65 const=12
+  walk-forward lasso seed=12…
+  seed=12 wall=17.2s mean_ic=-0.00821 t=-1.35 const=71
+  walk-forward lasso seed=13…
+  seed=13 wall=14.9s mean_ic=-0.00549 t=-0.51 const=48
+  walk-forward lasso seed=14…
+  seed=14 wall=12.8s mean_ic=-0.00139 t=-0.15 const=72
+  walk-forward lasso seed=15…
+  seed=15 wall=11.9s mean_ic=-0.01434 t=-2.40 const=95
+  walk-forward lasso seed=16…
+  seed=16 wall=77.1s mean_ic=0.02828 t=4.17 const=12
+  walk-forward lasso seed=17…
+  seed=17 wall=14.1s mean_ic=0.00431 t=0.40 const=59
+  walk-forward lasso seed=18…
+  seed=18 wall=25.1s mean_ic=0.00586 t=0.88 const=36
+  walk-forward lasso seed=19…
+  seed=19 wall=37.6s mean_ic=0.00528 t=0.76 const=48
+  walk-forward lasso seed=20…
+  seed=20 wall=22.0s mean_ic=0.00162 t=0.21 const=48
+  walk-forward lasso seed=21…
+  seed=21 wall=20.1s mean_ic=0.00196 t=0.32 const=72
+  walk-forward lasso seed=22…
+  seed=22 wall=25.2s mean_ic=0.00627 t=0.99 const=24
+  walk-forward lasso seed=23…
+  seed=23 wall=22.3s mean_ic=-0.00403 t=-1.18 const=119
+  walk-forward lasso seed=24…
+  seed=24 wall=9.7s mean_ic=-0.00878 t=-1.26 const=107
+  walk-forward lasso seed=25…
+  seed=25 wall=18.3s mean_ic=-0.00015 t=-0.03 const=72
+  walk-forward lasso seed=26…
+  seed=26 wall=14.7s mean_ic=0.01006 t=1.16 const=71
+  walk-forward lasso seed=27…
+  seed=27 wall=47.8s mean_ic=-0.00466 t=-1.11 const=84
+  walk-forward lasso seed=28…
+  seed=28 wall=13.1s mean_ic=-0.00333 t=-1.01 const=119
+  walk-forward lasso seed=29…
+  seed=29 wall=24.2s mean_ic=-0.00305 t=-0.38 const=47
+  walk-forward lasso seed=30…
+  seed=30 wall=26.8s mean_ic=0.02381 t=2.89 const=24
+  walk-forward lasso seed=31…
+  seed=31 wall=22.3s mean_ic=-0.00296 t=-0.45 const=48
+  walk-forward lasso seed=32…
+  seed=32 wall=18.0s mean_ic=0.00236 t=0.40 const=71
+  walk-forward lasso seed=33…
+  seed=33 wall=20.7s mean_ic=-0.00034 t=-0.06 const=84
+  walk-forward lasso seed=34…
+  seed=34 wall=10.8s mean_ic=-0.00932 t=-1.65 const=107
+  walk-forward lasso seed=35…
+  seed=35 wall=28.0s mean_ic=-0.00265 t=-0.69 const=108
+  walk-forward lasso seed=36…
+  seed=36 wall=54.5s mean_ic=0.00383 t=0.62 const=48
+  walk-forward lasso seed=37…
+  seed=37 wall=18.2s mean_ic=0.00582 t=0.88 const=72
+  walk-forward lasso seed=38…
+  seed=38 wall=16.3s mean_ic=-0.00834 t=-2.30 const=107
+  walk-forward lasso seed=39…
+  seed=39 wall=46.6s mean_ic=-0.00530 t=-0.78 const=71
+{
+  "n_seeds": 40,
+  "pooled_mean_ic": 0.0007294887502305513,
+  "sd_across_seed_means": 0.009469687948035193,
+  "se_mean": 0.0014972891323418716,
+  "ci95_lo": -0.002205197949159517,
+  "ci95_hi": 0.0036641754496206194,
+  "pooled_monthly_mean_ic": 0.0007294887502305508,
+  "pooled_monthly_t": 0.6563665825540075,
+  "n_pooled_months": 6200,
+  "n_constant_pred_total": 2373,
+  "seed_mean_min": -0.017239067631400044,
+  "seed_mean_max": 0.028281818609439596,
+  "n_seeds_t_gt_2": 3,
+  "n_seeds_abs_t_gt_2": 5,
+  "pass_abs": true,
+  "pass_t": true,
+  "pass": true
+}
+ seed   mean_ic  t_mean_ic  n_constant_pred
+    0  0.023573   2.952944                0
+    1 -0.000132  -0.015001                0
+    2 -0.008849  -1.223979               36
+    3  0.002739   0.475309               12
+    4  0.011690   1.627892                0
+    5  0.006923   0.811575               36
+    6  0.001618   0.426701               83
+    7 -0.001142  -0.165658               59
+    8 -0.004686  -0.675213               48
+    9 -0.017239  -1.746541               83
+   10 -0.007418  -1.043922               60
+   11  0.004967   0.649624               12
+   12 -0.008209  -1.350413               71
+   13 -0.005491  -0.505771               48
+   14 -0.001393  -0.152463               72
+   15 -0.014341  -2.399456               95
+   16  0.028282   4.171157               12
+   17  0.004315   0.399798               59
+   18  0.005863   0.883562               36
+   19  0.005281   0.763806               48
+   20  0.001620   0.206412               48
+   21  0.001955   0.317188               72
+   22  0.006270   0.988986               24
+   23 -0.004027  -1.183818              119
+   24 -0.008778  -1.258295              107
+   25 -0.000153  -0.025841               72
+   26  0.010060   1.159456               71
+   27 -0.004655  -1.107273               84
+   28 -0.003332  -1.005921              119
+   29 -0.003054  -0.377139               47
+   30  0.023812   2.889624               24
+   31 -0.002961  -0.453193               48
+   32  0.002361   0.402482               71
+   33 -0.000338  -0.059327               84
+   34 -0.009317  -1.646549              107
+   35 -0.002647  -0.689311              108
+   36  0.003834   0.622096               48
+   37  0.005820   0.880878               72
+   38 -0.008336  -2.302773              107
+   39 -0.005304  -0.781884               71
+shuffle wall=854.1s
+Validation alpha old vs new metric (real panel)…
+  year=2011 old_alpha=1e-05 new_alpha=10 changed=True max_drop=36
+  year=2012 old_alpha=1e-05 new_alpha=1e-05 changed=False max_drop=36
+  year=2013 old_alpha=0.00316228 new_alpha=0.00316228 changed=False max_drop=36
+  year=2014 old_alpha=0.00316228 new_alpha=0.00316228 changed=False max_drop=36
+  year=2015 old_alpha=0.00316228 new_alpha=0.00316228 changed=False max_drop=36
+  year=2016 old_alpha=1e-05 new_alpha=1e-05 changed=False max_drop=36
+  year=2017 old_alpha=0.0001 new_alpha=0.0001 changed=False max_drop=36
+  year=2018 old_alpha=0.00316228 new_alpha=0.00316228 changed=False max_drop=36
+  year=2019 old_alpha=0.001 new_alpha=0.001 changed=False max_drop=36
+  year=2020 old_alpha=0.000316228 new_alpha=0.000316228 changed=False max_drop=36
+  year=2021 old_alpha=0.001 new_alpha=0.001 changed=False max_drop=36
+  year=2022 old_alpha=1e-05 new_alpha=1e-05 changed=False max_drop=36
+  year=2023 old_alpha=1e-05 new_alpha=1e-05 changed=False max_drop=36
+{
+  "n_years": 13,
+  "n_years_alpha_changed": 1,
+  "years_changed": [
+    2011
+  ],
+  "alpha_stable": false
+}
+validation check wall=57.7s
+MERGE_BLOCKED
+WALL=916.69 RSS_KB=1416008
