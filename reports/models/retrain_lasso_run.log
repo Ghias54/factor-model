@@ -1,0 +1,120 @@
+loading panel…
+Step 1 verify ridge…
+  ridge 2011: const_sum=0 changed=False
+  ridge 2012: const_sum=0 changed=False
+  ridge 2013: const_sum=0 changed=False
+  ridge 2014: const_sum=0 changed=False
+  ridge 2015: const_sum=0 changed=False
+  ridge 2016: const_sum=0 changed=False
+  ridge 2017: const_sum=0 changed=False
+  ridge 2018: const_sum=0 changed=False
+  ridge 2019: const_sum=0 changed=False
+  ridge 2020: const_sum=0 changed=False
+  ridge 2021: const_sum=0 changed=False
+  ridge 2022: const_sum=0 changed=False
+  ridge 2023: const_sum=0 changed=False
+Step 1 verify xgboost…
+  xgboost 2011: const_sum=0 changed=False
+  xgboost 2012: const_sum=0 changed=False
+  xgboost 2013: const_sum=0 changed=False
+  xgboost 2014: const_sum=0 changed=False
+  xgboost 2015: const_sum=0 changed=False
+  xgboost 2016: const_sum=0 changed=False
+  xgboost 2017: const_sum=0 changed=False
+  xgboost 2018: const_sum=0 changed=False
+  xgboost 2019: const_sum=0 changed=False
+  xgboost 2020: const_sum=0 changed=False
+  xgboost 2021: const_sum=0 changed=False
+  xgboost 2022: const_sum=0 changed=False
+  xgboost 2023: const_sum=0 changed=False
+Step 1 verify random_forest…
+  random_forest 2011: const_sum=0 changed=False
+  random_forest 2012: const_sum=0 changed=False
+  random_forest 2013: const_sum=0 changed=False
+  random_forest 2014: const_sum=0 changed=False
+  random_forest 2015: const_sum=0 changed=False
+  random_forest 2016: const_sum=0 changed=False
+  random_forest 2017: const_sum=0 changed=False
+  random_forest 2018: const_sum=0 changed=False
+  random_forest 2019: const_sum=0 changed=False
+  random_forest 2020: const_sum=0 changed=False
+  random_forest 2021: const_sum=0 changed=False
+  random_forest 2022: const_sum=0 changed=False
+  random_forest 2023: const_sum=0 changed=False
+Step 1 verify mlp…
+  mlp 2011: const_sum=0 changed=False
+  mlp 2012: const_sum=0 changed=False
+  mlp 2013: const_sum=0 changed=False
+  mlp 2014: const_sum=0 changed=False
+  mlp 2015: const_sum=0 changed=False
+  mlp 2016: const_sum=0 changed=False
+  mlp 2017: const_sum=0 changed=False
+  mlp 2018: const_sum=0 changed=False
+  mlp 2019: const_sum=0 changed=False
+  mlp 2020: const_sum=0 changed=False
+  mlp 2021: const_sum=0 changed=False
+  mlp 2022: const_sum=0 changed=False
+  mlp 2023: const_sum=0 changed=False
+verify_meta {'ridge': {'any_constant_val': False, 'any_params_changed': False}, 'xgboost': {'any_constant_val': False, 'any_params_changed': False}, 'random_forest': {'any_constant_val': False, 'any_params_changed': False}, 'mlp': {'any_constant_val': False, 'any_params_changed': False}}
+Step 2: retrain Lasso…
+ year  alpha_old  alpha_new  alpha_match  coef_match_expected  validation_ic_new
+ 2011   0.000010  10.000000         True                 True           0.000000
+ 2012   0.000010   0.000010         True                 True           0.000705
+ 2013   0.003162   0.003162         True                 True           0.013428
+ 2014   0.003162   0.003162         True                 True           0.009998
+ 2015   0.003162   0.003162         True                 True           0.016056
+ 2016   0.000010   0.000010         True                 True           0.023656
+ 2017   0.000100   0.000100         True                 True           0.023549
+ 2018   0.003162   0.003162         True                 True           0.043703
+ 2019   0.001000   0.001000         True                 True           0.032662
+ 2020   0.000316   0.000316         True                 True           0.051631
+ 2021   0.001000   0.001000         True                 True           0.035842
+ 2022   0.000010   0.000010         True                 True           0.058749
+ 2023   0.000010   0.000010         True                 True           0.044903
+lasso wall=34.3s 2011_alpha10=True later_alpha_match=True later_coef=True
+lasso OOS constant months=12
+Step 3: regenerate portfolios / metrics…
+ensemble months with lasso dropped: 12
+         name   sharpe  net_sharpe_10bps  excess_vs_benchmark  ff6_active_alpha_ann  ff6_active_alpha_t
+  ew_universe 0.564052          0.559593                  NaN                   NaN                 NaN
+     classic4 0.616782          0.579001             0.017019              0.004387            0.374080
+        lasso 0.697766          0.640224             0.029937              0.011031            0.819645
+        ridge 0.636073          0.573195             0.024608              0.003742            0.258955
+random_forest 0.593392          0.536671             0.017312             -0.004369           -0.274516
+      xgboost 0.601214          0.539188             0.019217              0.000339            0.023190
+          mlp 0.770812          0.709870             0.045700              0.022976            1.405931
+     ensemble 0.750253          0.689362             0.043797              0.019294            1.306778
+{
+  "verify": {
+    "ridge": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    },
+    "xgboost": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    },
+    "random_forest": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    },
+    "mlp": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    }
+  },
+  "unexpected_param_changes": [],
+  "lasso": {
+    "wall_s": 34.34616943215951,
+    "ok_2011": true,
+    "later_alpha_match": true,
+    "later_coef_match": true,
+    "n_oos_constant_months": 12
+  },
+  "merge_ok_inputs": {
+    "no_unexpected": true,
+    "lasso_2011_ok": true,
+    "lasso_later_ok": true
+  }
+}
+WALL=3563.34 RSS_KB=1325272

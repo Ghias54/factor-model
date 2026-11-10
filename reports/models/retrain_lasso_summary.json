@@ -1,0 +1,33 @@
+{
+  "verify": {
+    "ridge": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    },
+    "xgboost": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    },
+    "random_forest": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    },
+    "mlp": {
+      "any_constant_val": false,
+      "any_params_changed": false
+    }
+  },
+  "unexpected_param_changes": [],
+  "lasso": {
+    "wall_s": 34.34616943215951,
+    "ok_2011": true,
+    "later_alpha_match": true,
+    "later_coef_match": true,
+    "n_oos_constant_months": 12
+  },
+  "merge_ok_inputs": {
+    "no_unexpected": true,
+    "lasso_2011_ok": true,
+    "lasso_later_ok": true
+  }
+}

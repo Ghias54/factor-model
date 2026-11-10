@@ -1,0 +1,53 @@
+model,year,n_grid,n_constant_val_months_sum_over_grid,any_grid_point_had_constant_month,params_old,params_new,params_changed
+ridge,2011,13,0,False,"{""alpha"": 0.1}","{""alpha"": 0.1}",False
+ridge,2012,13,0,False,"{""alpha"": 316.22776601683796}","{""alpha"": 316.22776601683796}",False
+ridge,2013,13,0,False,"{""alpha"": 1000.0}","{""alpha"": 1000.0}",False
+ridge,2014,13,0,False,"{""alpha"": 0.03162277660168379}","{""alpha"": 0.03162277660168379}",False
+ridge,2015,13,0,False,"{""alpha"": 0.001}","{""alpha"": 0.001}",False
+ridge,2016,13,0,False,"{""alpha"": 0.31622776601683794}","{""alpha"": 0.31622776601683794}",False
+ridge,2017,13,0,False,"{""alpha"": 0.31622776601683794}","{""alpha"": 0.31622776601683794}",False
+ridge,2018,13,0,False,"{""alpha"": 1000.0}","{""alpha"": 1000.0}",False
+ridge,2019,13,0,False,"{""alpha"": 1000.0}","{""alpha"": 1000.0}",False
+ridge,2020,13,0,False,"{""alpha"": 1000.0}","{""alpha"": 1000.0}",False
+ridge,2021,13,0,False,"{""alpha"": 3.1622776601683795}","{""alpha"": 3.1622776601683795}",False
+ridge,2022,13,0,False,"{""alpha"": 10.0}","{""alpha"": 10.0}",False
+ridge,2023,13,0,False,"{""alpha"": 0.01}","{""alpha"": 0.01}",False
+xgboost,2011,16,0,False,"{""max_depth"": 2, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 2, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2012,16,0,False,"{""max_depth"": 3, ""learning_rate"": 0.01, ""min_child_weight"": 10, ""reg_lambda"": 1.0}","{""max_depth"": 3, ""learning_rate"": 0.01, ""min_child_weight"": 10, ""reg_lambda"": 1.0}",False
+xgboost,2013,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2014,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}",False
+xgboost,2015,16,0,False,"{""max_depth"": 4, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}","{""max_depth"": 4, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}",False
+xgboost,2016,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2017,16,0,False,"{""max_depth"": 4, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 4, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2018,16,0,False,"{""max_depth"": 2, ""learning_rate"": 0.05, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 2, ""learning_rate"": 0.05, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2019,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2020,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}",False
+xgboost,2021,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 50, ""reg_lambda"": 1.0}",False
+xgboost,2022,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 10, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.01, ""min_child_weight"": 10, ""reg_lambda"": 1.0}",False
+xgboost,2023,16,0,False,"{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}","{""max_depth"": 6, ""learning_rate"": 0.05, ""min_child_weight"": 10, ""reg_lambda"": 1.0}",False
+random_forest,2011,18,0,False,"{""max_depth"": 3, ""min_samples_leaf"": 500, ""max_features"": 0.33}","{""max_depth"": 3, ""min_samples_leaf"": 500, ""max_features"": 0.33}",False
+random_forest,2012,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 500, ""max_features"": 0.5}","{""max_depth"": 8, ""min_samples_leaf"": 500, ""max_features"": 0.5}",False
+random_forest,2013,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}",False
+random_forest,2014,18,0,False,"{""max_depth"": 3, ""min_samples_leaf"": 100, ""max_features"": 0.33}","{""max_depth"": 3, ""min_samples_leaf"": 100, ""max_features"": 0.33}",False
+random_forest,2015,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}",False
+random_forest,2016,18,0,False,"{""max_depth"": 3, ""min_samples_leaf"": 2000, ""max_features"": 0.33}","{""max_depth"": 3, ""min_samples_leaf"": 2000, ""max_features"": 0.33}",False
+random_forest,2017,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 500, ""max_features"": 0.5}","{""max_depth"": 8, ""min_samples_leaf"": 500, ""max_features"": 0.5}",False
+random_forest,2018,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.5}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.5}",False
+random_forest,2019,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}",False
+random_forest,2020,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}",False
+random_forest,2021,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.5}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.5}",False
+random_forest,2022,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 500, ""max_features"": 0.33}","{""max_depth"": 8, ""min_samples_leaf"": 500, ""max_features"": 0.33}",False
+random_forest,2023,18,0,False,"{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}","{""max_depth"": 8, ""min_samples_leaf"": 100, ""max_features"": 0.33}",False
+mlp,2011,8,0,False,"{""hidden"": [64, 32, 16], ""dropout"": 0.1, ""weight_decay"": 0.01}","{""hidden"": [64, 32, 16], ""dropout"": 0.1, ""weight_decay"": 0.01}",False
+mlp,2012,8,0,False,"{""hidden"": [64, 32, 16], ""dropout"": 0.3, ""weight_decay"": 0.01}","{""hidden"": [64, 32, 16], ""dropout"": 0.3, ""weight_decay"": 0.01}",False
+mlp,2013,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}",False
+mlp,2014,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}",False
+mlp,2015,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.01}","{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.01}",False
+mlp,2016,8,0,False,"{""hidden"": [64, 32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}","{""hidden"": [64, 32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}",False
+mlp,2017,8,0,False,"{""hidden"": [64, 32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}","{""hidden"": [64, 32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}",False
+mlp,2018,8,0,False,"{""hidden"": [64, 32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}","{""hidden"": [64, 32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}",False
+mlp,2019,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}",False
+mlp,2020,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}",False
+mlp,2021,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.3, ""weight_decay"": 0.001}",False
+mlp,2022,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}",False
+mlp,2023,8,0,False,"{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}","{""hidden"": [32, 16], ""dropout"": 0.1, ""weight_decay"": 0.001}",False

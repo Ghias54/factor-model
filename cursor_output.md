@@ -1,46 +1,44 @@
-# cursor_output — Lasso 40-seed leakage + validation alpha check
+# cursor_output — Lasso corrected-IC retrain + merge
 
-**Verdict:** shuffle gate **passed** · validation alpha **changed (2011)** · merged **no**
+**Verdict:** merged **yes** (pending final SHA after merge) · conditions met
 
-**Branch:** `feat/nonlinear-models` (unmerged)
+## 1. Step 1 — other models' tuning
 
-## 1. Lasso 40-seed shuffle (corrected IC)
+| Model | Any constant val month (any grid point) | Params changed? |
+|---|---|---|
+| Ridge | no | no |
+| XGBoost | no | no |
+| Random forest | no | no |
+| MLP | no | no |
 
-Seeds 0–39, full window 2011-01…2023-11, same Lasso grid. Wall ≈ 854 s (new seeds) + reuse of 0–4.
+No unexpected retrain of other models.
 
-| Stat | Value |
-|---|---|
-| Pooled mean IC (across 40 seed means) | **0.00073** |
-| SD across seed means | 0.00947 |
-| SE (sd/√40) | 0.00150 |
-| 95% CI | **[−0.00221, 0.00366]** |
-| Pooled monthly t (6200 month×seed ICs) | **0.66** |
-| Constant-pred months (total) | 2373 |
-| Seed mean min / max | −0.0172 / 0.0283 |
-| Seeds with t > 2 | 3 (expect ~1 under null; also 5 with \|t\| > 2) |
-| Gate \|mean\| < 0.005 and \|t\| < 2 | **PASS** |
+## 2. Lasso before / after
 
-Five seeds were underpowered (SE ≈ 0.006 > gate); forty seeds put the mean firmly near zero with a CI inside ±0.005. File: `reports/models/leakage_lasso_40seed.csv`.
+2011 α → **10** (confirmed). 2012–2023 alphas and coefficients match prior fits. 12 OOS months with constant predictions (all 2011) → portfolio = EW those months; IC = 0.
 
-## 2. Validation constant months / alpha choice (real Lasso)
+| | Sharpe | Net 10bps | Excess vs EW | Active α | Active t | 2011 excess |
+|---|---:|---:|---:|---:|---:|---:|
+| Lasso before | 0.668 | 0.608 | +2.94% | +0.87% | 0.57 | −4.79% |
+| Lasso after | **0.698** | **0.640** | +2.99% | +1.10% | 0.82 | **0.0%** |
+| Ensemble before | 0.749 | 0.688 | +4.35% | +1.94% | 1.33 | −3.52% |
+| Ensemble after | 0.750 | 0.689 | +4.38% | +1.93% | 1.31 | −3.17% |
 
-Refit each year’s train/val split; score every alpha with old (drop constant months) vs new (IC=0). **Do not retune production.**
+Ensemble dropped Lasso in 12 months (rank-average of XGB+MLP only).
 
-| Year | Alpha (old drop) | Alpha (new =0) | Changed? | Max dropped months (any α) |
-|---|---:|---:|---|---:|
-| **2011** | **1e-5** | **10** | **yes** | 36 |
-| 2012–2023 | (unchanged each year) | same | no | ≤36 |
+## 3. Head-to-head (updated)
 
-**2011 flips from near-unregularized to fully regularized.** Under the new metric, alphas that zero predictions get IC=0 every month; the old metric dropped those months and let α=1e-5 win on the remaining variation. Per Step 2: **stop — do not merge.**
+| Portfolio | Sharpe | Net 10bps | Excess vs EW | Active α | Active t |
+|---|---:|---:|---:|---:|---:|
+| EW universe | 0.564 | 0.560 | — | — | — |
+| Classic-4 | 0.617 | 0.579 | +1.70% | +0.44% | 0.37 |
+| Lasso | 0.698 | 0.640 | +2.99% | +1.10% | 0.82 |
+| Ridge | 0.636 | 0.573 | +2.46% | +0.37% | 0.26 |
+| RF | 0.593 | 0.537 | +1.73% | −0.44% | −0.27 |
+| XGBoost | 0.621 | 0.560 | +1.89% | +0.19% | 0.14 |
+| MLP | 0.771 | 0.710 | +4.57% | +2.30% | 1.41 |
+| Ensemble | 0.750 | 0.689 | +4.38% | +1.93% | 1.31 |
 
-Files: `lasso_validation_ic_metric_compare.csv`, `.json`.
+## 4. Tests / merge
 
-## 3. Tests
-
-**45 passed** (`pytest -q`, ~380 s).
-
-## 4. Not done / skipped
-
-- **Merge** blocked solely by the 2011 validation alpha change (shuffle gate is clean).
-- No production retune / retrain despite the 2011 discrepancy.
-- Other models not re-shuffled this task.
+Full suite green; merge executed under explicit Rehan authorization + conditions.
