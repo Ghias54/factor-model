@@ -3,7 +3,7 @@
 Branch: `feat/holdout`  
 Pre-registered against main `6fff7a54e0b1fe761caaa5dc4caa5ac7c1413a4d`  
 Holdout wall time: **1468.8 s** (~24.5 min). RF 754 s, MLP 685 s, XGB 14 s, linear < 10 s.  
-Tests: **51 passed**. Merge SHA: see bottom.
+Tests: **51 passed** (on branch and again on main after merge). Merge SHA: `d16df4817eea4514e1df4498205603a8afc2c70c`.
 
 Ken French FF5+UMD refreshed; last month **2026-09**. Active FF6 alpha uses **all 33** holdout return months.
 
@@ -114,7 +114,7 @@ None. Panel: 33 holdout formations, 1,000 names each, max ret_1m null share 0.3%
 2. `cdf891b` Add holdout entry point and keep development paths capped.
 3. (this commit) Holdout results, reports, cursor_output.
 
-**Merge:** Rehan authorized in the task (Step 7) if tests green. Merged with `--no-ff`; merge SHA recorded below after merge.
+**Merge:** Rehan authorized in the task (Step 7) if tests green. Merged with `--no-ff` into main; merge SHA **`d16df4817eea4514e1df4498205603a8afc2c70c`**. Main retested (51 passed) and pushed.
 
 **Not done / skipped:**
 - No model/grid/feature/threshold changes (by design).
