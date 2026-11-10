@@ -56,7 +56,7 @@ Absolute FF6 alpha of the EW book itself is −2.3% (t −2.7), so every long-on
 
 ## 4. Tests
 
-Full `pytest` run after this wrap-up — see commit notes / terminal. Suite leakage test uses |t| < 2 on a short window with 5 seeds (not the old 0.02 abs threshold).
+**43 passed** (`pytest -q`, ~199 s). Suite leakage test uses |t| < 2 on a short window with 5 seeds (not the old 0.02 abs threshold).
 
 ## 5. Not done / skipped
 
